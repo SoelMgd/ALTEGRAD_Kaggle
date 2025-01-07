@@ -1,5 +1,6 @@
 torch
-scipynetworkx
+scipy
+networkx
 community
 math
 grakel
