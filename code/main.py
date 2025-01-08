@@ -109,6 +109,12 @@ parser.add_argument('--preprocess', action='store_true', default=False, help="Pr
 # Use the old loss
 parser.add_argument('--old_loss', action='store_true', default=False, help="Use the old loss (default: False)")
 
+# alpha autoencoder (weight of the property loss)
+parser.add_argument('--alpha_autoencoder', type=float, default=0.05, help="Alpha autoencoder (default: 0.05)")
+
+# beta autoencoder (weight of the KL divergence)
+parser.add_argument('--beta_autoencoder', type=float, default=1.0, help="Beta autoencoder (default: 1.0)")
+
 
 args = parser.parse_args()
 
@@ -195,10 +201,10 @@ if args.train_autoencoder:
             data = data.to(device)
             optimizer.zero_grad()
             if args.old_loss:
-                loss, recon, kld  = autoencoder.loss_function_old(data)
+                loss, recon, kld  = autoencoder.loss_function_old(data, args.beta_autoencoder)
                 prop_loss = torch.tensor(0)
             else:
-                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
+                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds, args.beta_autoencoder, args.alpha_autoencoder)
             train_loss_all_recon += recon.item()
             train_loss_all_kld += kld.item()
             train_loss_all_prop += prop_loss.item()
@@ -219,10 +225,10 @@ if args.train_autoencoder:
         for data in val_loader:
             data = data.to(device)
             if args.old_loss:
-                loss, recon, kld  = autoencoder.loss_function_old(data)
+                loss, recon, kld  = autoencoder.loss_function_old(data, args.beta_autoencoder)
                 prop_loss = torch.tensor(0)
             else:
-                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
+                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds, args.beta_autoencoder, args.alpha_autoencoder)
             val_loss_all_recon += recon.item()
             val_loss_all_kld += kld.item()
             val_loss_all += loss.item()
