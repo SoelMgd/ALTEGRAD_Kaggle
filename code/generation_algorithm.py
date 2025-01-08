@@ -160,16 +160,31 @@ def extract_statistics_from_description(file):
 
 
 
-def extract_statistics_from_graph(graph):
-    """Charge un graphe depuis un fichier et calcule ses statistiques."""
-    #graph = nx.read_edgelist(graph_path)
+def extract_statistics_from_graph(graph_input):
+    """
+    Extrait les statistiques d'un graphe à partir d'un chemin ou d'un objet NetworkX.
+    
+    Parameters:
+        graph_input (str ou nx.Graph): Chemin vers le fichier ou graphe NetworkX.
+    
+    Returns:
+        list: [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+    """
+    if isinstance(graph_input, str):  # Si c'est un chemin vers un fichier
+        graph = nx.read_edgelist(graph_input)
+    elif isinstance(graph_input, nx.Graph):  # Si c'est un objet NetworkX
+        graph = graph_input
+    else:
+        raise ValueError("L'entrée doit être un chemin vers un fichier ou un objet NetworkX.")
+    
     n_nodes = graph.number_of_nodes()
     n_edges = graph.number_of_edges()
     average_degree = sum(dict(graph.degree).values()) / n_nodes if n_nodes > 0 else 0
     n_triangles = sum(nx.triangles(graph).values()) // 3
-    communities = list(nx.connected_components(graph))  # Connexité pour les communautés
-    n_communities = len(communities)
+    n_communities = len(list(nx.connected_components(graph)))  # Connexité pour les communautés
+    
     return [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
 
 
 
