@@ -228,6 +228,72 @@ def sigmoid_beta_schedule(timesteps):
     return torch.sigmoid(betas) * (beta_end - beta_start) + beta_start
 
 
+import torch
+import networkx as nx
+import numpy as np
+
+def compute_graph_properties(adj):
+    """
+    adj: torch.Tensor de forme (n_max_nodes, n_max_nodes)
+    Retourne un tenseur de forme (7,) contenant : 
+      [ nombre_de_noeuds, nombre_d_arêtes, degré_moyen, nb_triangles, clustering, max_kcore, nb_communautés ]
+    """
+    # On convertit la matrice en graph NetworkX
+    # (en enlevant éventuellement les nœuds isolés pour éviter les indices hors bornes)
+    G = nx.from_numpy_array(adj.detach().cpu().numpy())
+    
+    # Filtrage des nœuds isolés s’il y en a
+    # (facultatif, selon la logique de votre dataset)
+    isolated = list(nx.isolates(G))
+    if len(isolated) > 0:
+        G.remove_nodes_from(isolated)
+
+    nb_nodes = G.number_of_nodes()
+    nb_edges = G.number_of_edges()
+    if nb_nodes > 1:
+        avg_degree = float(np.mean([deg for (_, deg) in G.degree()]))
+    else:
+        avg_degree = 0.0
+    
+    # Triangles
+    # NetworkX renvoie un dict {node: nb_triangles}, on somme pour avoir le total
+    tri_dict = nx.triangles(G)
+    nb_triangles = sum(tri_dict.values()) / 3  # chaque triangle est compté 3 fois
+    
+    # Clustering global
+    clustering_coeff = nx.transitivity(G)  # ou nx.average_clustering(G)
+    
+    # k-core max
+    # On récupère les k-cores jusqu’à exhaustion et on prend le plus grand k
+    # (attention au cas où le graphe est petit)
+    max_k = 0
+    for k in range(1, nb_nodes+1):
+        c = nx.k_core(G, k=k)
+        if c.number_of_nodes() > 0:
+            max_k = k
+        else:
+            break
+    
+    # Détection de communautés (ex: Louvain)
+    # Nécessite la librairie python-louvain (community)
+    try:
+        import community as community_louvain
+        partition = community_louvain.best_partition(G)
+        nb_communities = len(set(partition.values()))
+    except:
+        # Par défaut, on considère qu’il n’y a qu’une seule composante
+        nb_communities = 1
+    
+    prop_vec = [
+        float(nb_nodes),
+        float(nb_edges),
+        float(avg_degree),
+        float(nb_triangles),
+        float(clustering_coeff),
+        float(max_k),
+        float(nb_communities),
+    ]
+    return torch.tensor(prop_vec, dtype=torch.float32, device=adj.device)
 
 
 

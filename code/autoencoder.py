@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from torch_geometric.nn import GINConv
 from torch_geometric.nn import global_add_pool
 
+from utils import compute_graph_properties
+
 # Decoder
 class Decoder(nn.Module):
     def __init__(self, latent_dim, hidden_dim, n_layers, n_nodes):
@@ -119,7 +121,7 @@ class VariationalAutoEncoder(nn.Module):
        adj = self.decoder(mu)
        return adj
 
-    def loss_function(self, data, beta=0.05):
+    def loss_function_old(self, data, beta=0.05):
         x_g  = self.encoder(data)
         mu = self.fc_mu(x_g)
         logvar = self.fc_logvar(x_g)
@@ -131,3 +133,39 @@ class VariationalAutoEncoder(nn.Module):
         loss = recon + beta*kld
 
         return loss, recon, kld
+        
+    def loss_function(self, data, beta=0.05, alpha=1.0):
+        """
+        data: batch issu du DataLoader
+        beta: pondère la partie KLD
+        alpha: pondère la partie 'property loss'
+        """
+        x_g  = self.encoder(data)
+        mu = self.fc_mu(x_g)
+        logvar = self.fc_logvar(x_g)
+        z = self.reparameterize(mu, logvar)
+
+        # Reconstruction d’adjacence
+        adj_recon = self.decoder(z)
+        
+        # 1) L1 ou MSE sur la matrice d’adjacence
+        recon_loss = F.l1_loss(adj_recon, data.A, reduction='mean')
+        
+        # 2) KLD du VAE
+        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        
+        # 3) Propriété(s) du graphe
+        # On fait la moyenne sur le batch
+        prop_loss = 0.0
+        for i in range(adj_recon.size(0)):
+            # calcule les propriétés du graphe reconstruit i
+            prop_est = compute_graph_properties(adj_recon[i])
+            # compare à data.stats[i] (dimension (7,))
+            prop_loss += F.l1_loss(prop_est, data.stats[i], reduction='mean')
+        prop_loss = prop_loss / adj_recon.size(0)
+
+        # Loss totale
+        loss = recon_loss + beta*kld + alpha*prop_loss
+
+        return loss, recon_loss, kld, prop_loss
+
