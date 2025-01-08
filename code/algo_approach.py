@@ -231,8 +231,8 @@ with torch.no_grad():
             
 
         # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
-        prop_target_scaled = (stat - means) / stds
-        prop_pred_true_scaled = (prop_pred_true - means) / stds
+        prop_target_scaled = (stat.cpu() - means.cpu()) / stds.cpu()
+        prop_pred_true_scaled = (prop_pred_true.cpu() - means.cpu()) / stds.cpu()
 
         # 5) On calcule une loss L1 (MAE) entre prop_est_scaled et prop_target_scaled
         prop_loss_batch_true = F.l1_loss(prop_pred_true_scaled, prop_target_scaled, reduction='mean')
