@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import networkx as nx
 from torch_geometric.data import DataLoader
+from denoise_model import DenoiseNN, p_losses, sample
 from tqdm import tqdm
 import numpy as np
 
@@ -26,8 +27,8 @@ def calculate_graph_statistics(graph):
     ]
 
 # Function to compute MAE
-def compute_mae(model, autoencoder, val_loader, latent_dim, timesteps, betas, device):
-    model.eval()
+def compute_mae(denoiser, autoencoder, val_loader, latent_dim, timesteps, betas, device):
+    denoiser.eval()
     mae_total = 0
     num_graphs = 0
 
@@ -37,7 +38,7 @@ def compute_mae(model, autoencoder, val_loader, latent_dim, timesteps, betas, de
 
             # Perform inference
             generated_samples = sample(
-                model, data.stats, latent_dim=latent_dim, timesteps=timesteps, betas=betas,
+                denoiser, data.stats, latent_dim=latent_dim, timesteps=timesteps, betas=betas,
                 batch_size=data.stats.size(0)
             )
             x_sample = generated_samples[-1]
