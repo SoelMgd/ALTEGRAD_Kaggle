@@ -126,7 +126,8 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
                 x[:,0] = torch.mm(adj, torch.ones(G.number_of_nodes(), 1))[:,0]/(n_max_nodes-1)
                 mn = min(G.number_of_nodes(),spectral_emb_dim)
                 mn+=1
-                x[:,1:mn] = eigvecs[:,:spectral_emb_dim]
+                #x[:,1:mn] = eigvecs[:,:spectral_emb_dim]
+                x[:,1:mn+1] = eigvecs[:,:mn]
                 adj = F.pad(adj, [0, size_diff, 0, size_diff])
                 adj = adj.unsqueeze(0)
 
