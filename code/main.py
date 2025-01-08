@@ -142,7 +142,7 @@ val_props = [data.stats.squeeze(0) for data in validset]
 train_props_stand = [(prop - means) / stds for prop in train_props]
 val_props_stand = [(prop - means) / stds for prop in val_props]
 num_epochs = 100
-predictor = PropertyPredictorGNN(input_dim=50*50, hidden_dim=128, output_dim=7)  # Exemple avec MLP
+predictor = PropertyPredictorGNN(input_dim=50*50, hidden_dim=128, output_dim=7).to(device)  # Exemple avec MLP
 optimizer = torch.optim.Adam(predictor.parameters(), lr=1e-3)
 loss_fn = nn.MSELoss()
 
