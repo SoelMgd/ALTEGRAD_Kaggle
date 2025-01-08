@@ -465,7 +465,7 @@ with open("output_determinist.csv", "w", newline="") as csvfile:
             print(f'properties true: {stat[i]}')
             
 
-            Gs_generated = construct_nx_from_adj(adj.detach().cpu().numpy())
+            Gs_generated = construct_nx_from_adj(adj)
             stat_x = stat_x.detach().cpu().numpy()
 
             # Define a graph ID
