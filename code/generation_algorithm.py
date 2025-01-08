@@ -273,7 +273,7 @@ def pipe_valid():
         print("Graph ", i, results[-1])
 
     # Calcul du score MAE
-    mae = np.mean([np.abs(np.array(r["true_stats"])[:limit] - np.array(r["generated_stats"])[:limit]).mean() for r in results])
+    mae = np.mean([np.abs(np.array(r["true_stats"]) - np.array(r["generated_stats"])).mean() for r in results])
     print(f"Mean Absolute Error (MAE): {mae}")
     
     # Sauvegarde des résultats
