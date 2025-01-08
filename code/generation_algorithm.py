@@ -64,7 +64,7 @@ def validate_and_adjust(graph, target_params):
         'n_communities': len(list(nx.connected_components(graph)))
     }
     for key, target in target_params.items():
-        print(f"{key}: target = {target}, current = {current_params[key]}")
+        #print(f"{key}: target = {target}, current = {current_params[key]}")
     return graph
 
 
@@ -194,6 +194,7 @@ def pipe():
                 "true_stats": true_stats_normalized.tolist(),
                 "generated_stats": generated_stats_normalized.tolist()
             })
+            print("Graph ", i, results[-1])
     
     # Calcul du score MAE
     mae = np.mean([np.abs(np.array(r["true_stats"])[:limit] - np.array(r["generated_stats"])[:limit]).mean() for r in results])
