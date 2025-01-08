@@ -126,6 +126,8 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
                 x[:,0] = torch.mm(adj, torch.ones(G.number_of_nodes(), 1))[:,0]/(n_max_nodes-1)
                 mn = min(G.number_of_nodes(),spectral_emb_dim)
                 mn+=1
+                print(f"eigvecs.shape: {eigvecs.shape}, spectral_emb_dim: {spectral_emb_dim}")
+
                 #x[:,1:mn] = eigvecs[:,:spectral_emb_dim]
                 x[:,1:mn+1] = eigvecs[:,:mn]
                 adj = F.pad(adj, [0, size_diff, 0, size_diff])
@@ -133,6 +135,8 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
 
                 feats_stats = extract_feats(fstats)
                 feats_stats = torch.FloatTensor(feats_stats).unsqueeze(0)
+                print(f"x.shape: {x.shape}")
+
 
                 data_lst.append(Data(x=x, edge_index=edge_index, A=adj, stats=feats_stats, filename = filen))
             torch.save(data_lst, filename)
