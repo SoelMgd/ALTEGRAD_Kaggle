@@ -110,22 +110,33 @@ class UNet(nn.Module):
         self.encoder = nn.ModuleList([UNetBlock(latent_dim, cond_dim) for _ in range(n_layers)])
         self.middle = UNetBlock(latent_dim, cond_dim)
         self.decoder = nn.ModuleList([UNetBlock(latent_dim, cond_dim) for _ in range(n_layers)])
+        
+        # Time embeddings
+        self.time_mlp = nn.Sequential(
+            SinusoidalPositionEmbeddings(latent_dim),
+            nn.Linear(latent_dim, latent_dim),
+            nn.ReLU(),
+        )
 
-    def forward(self, x, cond):
+    def forward(self, x, t, cond):
+        # Embed time step
+        t_emb = self.time_mlp(t)
+
         # Encoder path
         skip_connections = []
         for block in self.encoder:
-            x = block(x, cond)
+            x = block(x + t_emb, cond)  # Add time embedding
             skip_connections.append(x)
 
         # Middle block
-        x = self.middle(x, cond)
+        x = self.middle(x + t_emb, cond)  # Add time embedding
 
         # Decoder path with skip connections
         for block, skip in zip(self.decoder, reversed(skip_connections)):
-            x = block(x + skip, cond)
+            x = block(x + skip + t_emb, cond)  # Add time embedding
 
         return x
+
     
 
 
