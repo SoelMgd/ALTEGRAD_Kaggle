@@ -45,7 +45,7 @@ parser = argparse.ArgumentParser(description='NeuralGraphGenerator')
 parser = argparse.ArgumentParser(description='Configuration for the NeuralGraphGenerator model')
 
 # Learning rate for the optimizer
-parser.add_argument('--lr', type=float, default=1e-2, help="Learning rate for the optimizer, typically a small float value (default: 0.001)")
+parser.add_argument('--lr', type=float, default=1e-3, help="Learning rate for the optimizer, typically a small float value (default: 0.001)")
 
 # Dropout rate
 parser.add_argument('--dropout', type=float, default=0.0, help="Dropout rate (fraction of nodes to drop) to prevent overfitting (default: 0.0)")
@@ -57,10 +57,10 @@ parser.add_argument('--batch-size', type=int, default=256, help="Batch size for 
 parser.add_argument('--epochs-autoencoder', type=int, default=200, help="Number of training epochs for the autoencoder (default: 200)")
 
 # Hidden dimension size for the encoder network
-parser.add_argument('--hidden-dim-encoder', type=int, default=256, help="Hidden dimension size for encoder layers (default: 64)")
+parser.add_argument('--hidden-dim-encoder', type=int, default=64, help="Hidden dimension size for encoder layers (default: 64)")
 
 # Hidden dimension size for the decoder network
-parser.add_argument('--hidden-dim-decoder', type=int, default=128, help="Hidden dimension size for decoder layers (default: 256)")
+parser.add_argument('--hidden-dim-decoder', type=int, default=256, help="Hidden dimension size for decoder layers (default: 256)")
 
 # Dimensionality of the latent space
 parser.add_argument('--latent-dim', type=int, default=32, help="Dimensionality of the latent space in the autoencoder (default: 32)")
@@ -69,7 +69,7 @@ parser.add_argument('--latent-dim', type=int, default=32, help="Dimensionality o
 parser.add_argument('--n-max-nodes', type=int, default=50, help="Possible maximum number of nodes in graphs (default: 50)")
 
 # Number of layers in the encoder network
-parser.add_argument('--n-layers-encoder', type=int, default=3, help="Number of layers in the encoder network (default: 2)")
+parser.add_argument('--n-layers-encoder', type=int, default=2, help="Number of layers in the encoder network (default: 2)")
 
 # Number of layers in the decoder network
 parser.add_argument('--n-layers-decoder', type=int, default=3, help="Number of layers in the decoder network (default: 3)")
@@ -102,7 +102,6 @@ parser.add_argument('--dim-condition', type=int, default=128, help="Dimensionali
 parser.add_argument('--n-condition', type=int, default=7, help="Number of distinct condition properties used in conditional vector (default: 7)")
 
 args = parser.parse_args()
-print("Hyper-parameters:", args)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
