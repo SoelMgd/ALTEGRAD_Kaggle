@@ -136,7 +136,7 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim, preprocess=False)
                 feats_stats = extract_feats(fstats)
                 
                 feats_stats = torch.FloatTensor(feats_stats).unsqueeze(0)
-                print(f"x.shape: {x.shape}")
+                #print(f"x.shape: {x.shape}")
 
                 data_lst.append(Data(x=x, edge_index=edge_index, A=adj, stats=feats_stats, filename = filen))
             torch.save(data_lst, filename)
