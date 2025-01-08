@@ -160,6 +160,33 @@ def extract_statistics_from_description(file):
 
     return [n_nodes, n_edges, average_degree, n_triangles, n_communities, clustering, kcore]
 
+def custom_read_edgelist(file_path):
+    """
+    Lit un fichier edgelist et ignore les métadonnées inutiles `{}`.
+    
+    Parameters:
+        file_path (str): Chemin vers le fichier edgelist.
+    
+    Returns:
+        nx.Graph: Graphe NetworkX construit à partir des arêtes valides.
+    """
+    edges = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            # Ignorer les lignes vides ou mal formatées
+            if line.strip():
+                try:
+                    # Extraire uniquement les deux premiers éléments (nœuds)
+                    u, v = line.strip().split()[:2]
+                    edges.append((u, v))
+                except ValueError:
+                    # Si une ligne n'a pas exactement 2 ou plus éléments, l'ignorer
+                    continue
+    
+    # Construire un graphe à partir des arêtes valides
+    graph = nx.Graph()
+    graph.add_edges_from(edges)
+    return graph
 
 
 def extract_statistics_from_graph(graph_input):
@@ -170,10 +197,10 @@ def extract_statistics_from_graph(graph_input):
         graph_input (str ou nx.Graph): Chemin vers le fichier ou graphe NetworkX.
     
     Returns:
-        list: [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+        list: [n_nodes, n_edges, average_degree, n_triangles, n_communities, clustering, kcore]
     """
     if isinstance(graph_input, str):  # Si c'est un chemin vers un fichier
-        graph = nx.read_edgelist(graph_input)
+        graph = custom_read_edgelist(graph_input)  # Utilise la fonction personnalisée
     elif isinstance(graph_input, nx.Graph):  # Si c'est un objet NetworkX
         graph = graph_input
     else:
@@ -183,7 +210,7 @@ def extract_statistics_from_graph(graph_input):
     n_edges = graph.number_of_edges()
     average_degree = sum(dict(graph.degree).values()) / n_nodes if n_nodes > 0 else 0
     n_triangles = sum(nx.triangles(graph).values()) // 3
-    n_communities = len(list(nx.connected_components(graph)))  # Connexité pour les communautés
+    n_communities = len(list(nx.connected_components(graph)))
     clustering = nx.transitivity(graph)
     kcore = max(nx.core_number(graph).values())
     
