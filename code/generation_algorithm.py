@@ -94,26 +94,42 @@ def generate_graph(n_nodes, n_edges, average_degree, n_triangles, n_communities)
 
 ### EXTRACTION DES STATISTIQUES
 
-def extract_statistics_from_description(file_path):
-    """Extrait les statistiques depuis un fichier description en utilisant les positions des nombres."""
-    with open(file_path, 'r') as f:
-        content = f.read()
+def extract_numbers(text):
+    # Use regular expression to find integers and floats
+    numbers = re.findall(r'\d+\.\d+|\d+', text)
+    # Convert the extracted numbers to float
+    return [float(num) for num in numbers]
+
+
+def extract_feats(file):
+    stats = []
+    fread = open(file,"r")
+    line = fread.read()
+    line = line.strip()
+    stats = extract_numbers(line)
+    fread.close()
+    return stats
+
+def extract_statistics_from_description(file):
+    """
+    Extrait les statistiques depuis un fichier description en utilisant des fonctions fiables.
+    """
+    # Extraire les nombres depuis le texte
+    stats = extract_feats(file)
+
+    # Vérifier qu'il y a assez de valeurs
+    if len(stats) < 7:
+        raise ValueError(f"Le fichier {file} ne contient pas suffisamment de données pour extraire les statistiques.")
     
-    # Trouver tous les nombres dans le texte (entiers ou flottants)
-    numbers = re.findall(r'[\d.]+', content)
-    
-    # S'assurer qu'il y a suffisamment de nombres pour extraire les statistiques
-    if len(numbers) < 7:
-        raise ValueError(f"Le fichier {file_path} ne contient pas suffisamment de données pour extraire les statistiques.")
-    
-    # Extraire les statistiques nécessaires
-    n_nodes = int(numbers[0])  # 1er nombre
-    n_edges = int(numbers[1])  # 2ème nombre
-    average_degree = float(numbers[2])  # 3ème nombre
-    n_triangles = int(numbers[3])  # 4ème nombre
-    n_communities = int(numbers[6])  # 7ème nombre
-    
+    # Sélectionner les statistiques nécessaires
+    n_nodes = int(stats[0])  # 1er nombre
+    n_edges = int(stats[1])  # 2ème nombre
+    average_degree = float(stats[2])  # 3ème nombre
+    n_triangles = int(stats[3])  # 4ème nombre
+    n_communities = int(stats[6])  # 7ème nombre
+
     return [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
 
 
 def extract_statistics_from_graph(graph_path):
