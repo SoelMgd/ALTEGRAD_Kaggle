@@ -358,6 +358,7 @@ with torch.no_grad():
         for i in range(bs):
             prop_pred_true[i] = compute_graph_properties(adj[i])
             print(f'Graph {i} properties pred: {prop_pred_true[i]}')
+            print(f'properties pred est: {prop_pred_est[i]}')
             print(f'properties true: {stat[i]}')
             print(adj[i,:,:])
             print('\n')
