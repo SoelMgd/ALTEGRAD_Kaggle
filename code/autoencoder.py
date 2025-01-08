@@ -264,7 +264,7 @@ class VariationalAutoEncoder(nn.Module):
         # Normalisation pour éviter de dépasser les bornes min/max
 
         # Prédiction des propriétés pour tout le batch
-        prop_est = self.predictor(adj_recon)  # [batch_size, 7]
+        prop_est = self.predicator(adj_recon)  # [batch_size, 7]
         prop_est_scaled = (prop_est - means) / stds
         prop_target = data.stats
         prop_target_scaled = (prop_target - means) / stds
