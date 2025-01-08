@@ -63,7 +63,7 @@ def validate_and_adjust(graph, target_params):
         'n_triangles': sum(nx.triangles(graph).values()) // 3,
         'n_communities': len(list(nx.connected_components(graph)))
     }
-    for key, target in target_params.items():
+    #for key, target in target_params.items():
         #print(f"{key}: target = {target}, current = {current_params[key]}")
     return graph
 
