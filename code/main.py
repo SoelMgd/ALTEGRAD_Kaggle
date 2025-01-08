@@ -400,12 +400,18 @@ with open("output.csv", "w", newline="") as csvfile:
 
         for i in range(stat.size(0)):
             stat_x = stat_d[i]
+            print(f'Graph {k*bs+i} properties: {stat_x}')
+            print(adj[i,:,:])
 
             Gs_generated = construct_nx_from_adj(adj[i,:,:].detach().cpu().numpy())
             stat_x = stat_x.detach().cpu().numpy()
 
             # Define a graph ID
             graph_id = graph_ids[i]
+            
+            graph_prop = compute_graph_properties(adj[i,:,:])
+            print(graph_prop)
+            print('\n')
 
             # Convert the edge list to a single string
             edge_list_text = ", ".join([f"({u}, {v})" for u, v in Gs_generated.edges()])           
