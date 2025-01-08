@@ -73,14 +73,18 @@ def generate_graph(n_nodes, n_edges, average_degree, n_triangles, n_communities)
     # Étape 1 : Génération d'un graphe SBM
     p_intra = 0.6  # Probabilité intra-communautés
     p_inter = 0.1  # Probabilité inter-communautés
+    print("[--INFO] Génération du graph")
     graph = generate_sbm_graph(n_nodes, n_communities, p_intra, p_inter)
     
     # Étape 2 : Ajustement du nombre d’arêtes
+    print("[--INFO] Ajustement du nombre d'arrêtes")
     graph = adjust_edges(graph, n_edges, average_degree)
     
     # Étape 3 : Ajout de triangles
+    print("[--INFO] Ajustement du nombre de triangles")
     graph = add_triangles(graph, n_triangles)
     
+    print("[--INFO] Validation et ajustement")
     # Étape 4 : Validation et ajustements finaux
     target_params = {
         'n_nodes': n_nodes,
