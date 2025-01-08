@@ -155,8 +155,10 @@ def extract_statistics_from_description(file):
     average_degree = float(stats[2])  # 3ème nombre
     n_triangles = int(stats[3])  # 4ème nombre
     n_communities = int(stats[6])  # 7ème nombre
+    clustering = int(stats[4])
+    kcore = int(stats[5])
 
-    return [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+    return [n_nodes, n_edges, average_degree, n_triangles, n_communities, clustering, kcore]
 
 
 
@@ -182,8 +184,10 @@ def extract_statistics_from_graph(graph_input):
     average_degree = sum(dict(graph.degree).values()) / n_nodes if n_nodes > 0 else 0
     n_triangles = sum(nx.triangles(graph).values()) // 3
     n_communities = len(list(nx.connected_components(graph)))  # Connexité pour les communautés
+    clustering = nx.transitivity(graph)
+    kcore = max(nx.core_number(graph).values())
     
-    return [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+    return [n_nodes, n_edges, average_degree, n_triangles, n_communities, clustering, kcore]
 
 
 
@@ -213,7 +217,7 @@ def pipe_valid():
     # Génération et évaluation
     print("[INFO] Génération")
     results = []
-    limit = np.inf
+    limit = 5
     for i, graph_file in enumerate(sorted(os.listdir(graph_dir))):
         if i >= limit:
             break 
@@ -224,7 +228,7 @@ def pipe_valid():
         true_stats_graph = extract_statistics_from_graph(graph_path)
         
         # Génération d'un graphe
-        generated_graph = generate_graph(*true_stats_graph)
+        generated_graph = generate_graph(*true_stats_graph[:5])
         
         # Statistiques générées
         generated_stats = extract_statistics_from_graph(generated_graph)
@@ -249,6 +253,6 @@ def pipe_valid():
     #results_df = pd.DataFrame(results)
     #results_df.to_csv("results.csv", index=False)
 
-print("debut")
-pipe()
+
+pipe_valid()
 
