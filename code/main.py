@@ -23,7 +23,7 @@ from torch_geometric.loader import DataLoader
 
 from autoencoder import VariationalAutoEncoder
 from denoise_model import DenoiseNN, p_losses, sample
-from utils import linear_beta_schedule, construct_nx_from_adj, preprocess_dataset
+from utils import linear_beta_schedule, construct_nx_from_adj, preprocess_dataset, compute_graph_properties
 
 from prop_predictor import PropertyPredictorGNN, GraphFeatures
 
@@ -329,6 +329,7 @@ denoise_model.eval()
 
 ### Validation prop loss
 val_prop_loss_sum = 0.0
+val_prop_loss_true_sum = 0.0
 val_count = 0
 
 with torch.no_grad():
@@ -352,21 +353,29 @@ with torch.no_grad():
         adj = autoencoder.decode_mu(x_sample)  # [bs, n, n]
 
         # 3) On prédit les propriétés
-        prop_est = autoencoder.predicator(adj)  # [bs, 7]
+        prop_pred_est = autoencoder.predicator(adj)  # [bs, 7]
+        prop_pred_true = torch.zeros_like(prop_pred_est)
+        for i in range(bs):
+            prop_pred_true[i] = compute_graph_properties(adj[i])
 
         # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
-        prop_est_scaled = (prop_est - means) / stds
+        prop_pred_est_scaled = (prop_pred_est - means) / stds
         prop_target_scaled = (stat - means) / stds
+        prop_pred_true_scaled = (prop_pred_true - means) / stds
 
         # 5) On calcule une loss L1 (MAE) entre prop_est_scaled et prop_target_scaled
-        prop_loss_batch = F.l1_loss(prop_est_scaled, prop_target_scaled, reduction='mean')
+        prop_loss_batch = F.l1_loss(prop_pred_est_scaled, prop_target_scaled, reduction='mean')
+        prop_loss_batch_true = F.l1_loss(prop_pred_true_scaled, prop_target_scaled, reduction='mean')
 
         # On accumule pour faire la moyenne sur l'ensemble du set de validation
         val_prop_loss_sum += prop_loss_batch.item() * bs
+        val_prop_loss_true_sum += prop_loss_batch_true.item() * bs
         val_count += bs
 
 val_prop_loss_mean = val_prop_loss_sum / val_count
+val_prop_loss_mean_true = val_prop_loss_true_sum / val_count
 print(f"[Validation] Property Loss (diffusion+decode) = {val_prop_loss_mean:.4f}")
+print(f"[Validation] Property Loss (true) = {val_prop_loss_mean_true:.4f}")
 ###
 
 
