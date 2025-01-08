@@ -25,7 +25,7 @@ from autoencoder import VariationalAutoEncoder
 from denoise_model import DenoiseNN, p_losses, sample
 from utils import linear_beta_schedule, construct_nx_from_adj, preprocess_dataset
 
-from prop_predictor import PropertyPredictorMLP
+from prop_predictor import PropertyPredictorGNN
 
 
 from torch.utils.data import Subset
@@ -142,7 +142,7 @@ val_props = [data.stats.squeeze(0) for data in validset]
 train_props_stand = [(prop - means) / stds for prop in train_props]
 val_props_stand = [(prop - means) / stds for prop in val_props]
 num_epochs = 100
-predictor = PropertyPredictorMLP(input_dim=50*50, hidden_dim=128, output_dim=7)  # Exemple avec MLP
+predictor = PropertyPredictorGNN(input_dim=50*50, hidden_dim=128, output_dim=7)  # Exemple avec MLP
 optimizer = torch.optim.Adam(predictor.parameters(), lr=1e-3)
 loss_fn = nn.MSELoss()
 
@@ -167,7 +167,6 @@ for epoch in range(num_epochs):
             val_loss += loss_fn(preds, props)
         print(f'Epoch {epoch}, Train loss: {loss_all/len(trainset)}, Val loss: {val_loss/len(validset)}')
         
-torch.save(predictor.state_dict(), 'predictor.pth')
 
 # initialize VGAE model
 autoencoder = VariationalAutoEncoder(args.spectral_emb_dim+1, args.hidden_dim_encoder, args.hidden_dim_decoder, args.latent_dim, args.n_layers_encoder, args.n_layers_decoder, args.n_max_nodes, predictor).to(device)
