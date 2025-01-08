@@ -294,8 +294,7 @@ def extract_feats_from_text(text):
         list: Liste des nombres extraits.
     """
     # Utilise extract_numbers pour extraire les nombres
-    stats = extract_numbers(text.strip())
-    return stats
+    return extract_numbers(text.strip())
 
 
 
@@ -311,19 +310,19 @@ def extract_test_statistics(line):
         tuple: (graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities])
     """
     # Séparer l'ID du graphe et la description
-    parts = line.split(",")
+    parts = line.split(",", 1)  # Séparer uniquement sur la première virgule
     if len(parts) != 2:
         raise ValueError(f"Ligne mal formatée : {line}")
     
-    graph_id = parts[0]
-    description = parts[1]
+    graph_id = parts[0].strip()
+    description = parts[1].strip()
 
     # Extraire les nombres depuis la description
     stats = extract_feats_from_text(description)
 
     # Vérifier qu'il y a assez de valeurs
     if len(stats) < 7:
-        raise ValueError(f"La description du graphe {graph_id} est incomplète : {description}")
+        raise ValueError(f"La description du graphe {graph_id} est incomplète ou ambiguë : {description}")
     
     # Sélectionner les statistiques nécessaires
     n_nodes = int(stats[0])  # 1er nombre
@@ -333,6 +332,7 @@ def extract_test_statistics(line):
     n_communities = int(stats[6])  # 7ème nombre
 
     return graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
 
 
 
