@@ -221,9 +221,10 @@ class VariationalAutoEncoder(nn.Module):
                 prop_est = compute_graph_properties_approx(adj_recon[i])  # approximatif
                 prop_target = data.stats[i]                         # (7,)
                 
-                prop_est_scaled = (prop_est - min_max[0]) / (min_max[1] - min_max[0])
-                prop_target_scaled = (prop_target - min_max[0]) / (min_max[1] - min_max[0])
-
+                # min_max shape = (7,2)
+                prop_est_scaled = (prop_est - min_max[:,0]) / (min_max[:,1] - min_max[:,0])
+                prop_target_scaled = (prop_target - min_max[:,0]) / (min_max[:,1] - min_max[:,0])
+                
                 # MAE entre prop_est et prop_target
                 prop_loss += F.l1_loss(prop_est_scaled, prop_target_scaled, reduction='mean')
             
