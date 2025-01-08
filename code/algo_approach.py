@@ -441,7 +441,53 @@ val_prop_loss_mean_true = val_prop_loss_true_sum / val_count
 print(f"[Validation] Property Loss (true) = {val_prop_loss_mean_true:.4f}")
 ###
 
+# Save to a CSV file
+with open("output_determinist.csv", "w", newline="") as csvfile:
+    writer = csv.writer(csvfile)
+    # Write the header
+    writer.writerow(["graph_id", "edge_list"])
+    
+    prop_loss_sum = 0.0
+    count = 0
+    for k, data in enumerate(tqdm(test_loader, desc='Processing test set',)):
 
+        stat = data.stats
+        bs = stat.size(0)
+        
+        stat_gen = torch.zeros(bs, 7)
+
+        graph_ids = data.filename
+        
+        for i in range(stat.size(0)):
+            adj = generate_graph_from_features(stat[i].cpu().numpy())
+            stat_gen[i] = compute_graph_properties(torch.tensor(adj))
+            print(f'Graph {k*bs+i} properties: {stat_gen[i]}')
+            print(f'properties true: {stat[i]}')
+            
+
+            Gs_generated = construct_nx_from_adj(adj[i,:,:].detach().cpu().numpy())
+            stat_x = stat_x.detach().cpu().numpy()
+
+            # Define a graph ID
+            graph_id = graph_ids[i] 
+            
+            print('\n')
+
+            # Convert the edge list to a single string
+            edge_list_text = ", ".join([f"({u}, {v})" for u, v in Gs_generated.edges()])           
+            # Write the graph ID and the full edge list as a single row
+            writer.writerow([graph_id, edge_list_text])
+            
+        stat_gen_scaled = (stat_gen - means.cpu()) / stds.cpu()
+        stat_scaled = (stat - means.cpu()) / stds.cpu()
+        prop_loss_batch = F.l1_loss(stat_gen_scaled, stat_scaled, reduction='mean')
+        
+        prop_loss_sum += prop_loss_batch.item() * bs
+        count += bs
+        
+    prop_loss_mean = prop_loss_sum / count
+    print(f"[Test] Property Loss = {prop_loss_mean:.4f}")
+    
 # features = [14, 45, 6.4, 63, 0.56, 5, 2]  # Les 7 caractéristiques
 # adj_matrix = generate_graph_from_features(features)
 # print("Matrice d'adjacence générée :")
