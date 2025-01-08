@@ -9,6 +9,8 @@ import numpy as np
 
 from utils import compute_graph_properties, compute_graph_properties_approx
 
+
+
 # Decoder
 class Decoder(nn.Module):
     def __init__(self, latent_dim, hidden_dim, n_layers, n_nodes):
@@ -81,7 +83,7 @@ class GIN(torch.nn.Module):
 
 # Variational Autoencoder
 class VariationalAutoEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim_enc, hidden_dim_dec, latent_dim, n_layers_enc, n_layers_dec, n_max_nodes):
+    def __init__(self, input_dim, hidden_dim_enc, hidden_dim_dec, latent_dim, n_layers_enc, n_layers_dec, n_max_nodes, predictor):
         super(VariationalAutoEncoder, self).__init__()
         self.n_max_nodes = n_max_nodes
         self.input_dim = input_dim
@@ -89,6 +91,7 @@ class VariationalAutoEncoder(nn.Module):
         self.fc_mu = nn.Linear(hidden_dim_enc, latent_dim)
         self.fc_logvar = nn.Linear(hidden_dim_enc, latent_dim)
         self.decoder = Decoder(latent_dim, hidden_dim_dec, n_layers_dec, n_max_nodes)
+        self.predicator = predictor
 
     def forward(self, data):
         #print(f"data.x.shape: {data.x.shape}, input_dim: {self.encoder.convs[0].nn[0].in_features}")
@@ -136,7 +139,7 @@ class VariationalAutoEncoder(nn.Module):
 
         return loss, recon, kld
         
-    def loss_function_old2(self, data, beta=0.05, alpha=1.0):
+    def loss_function_prop(self, data, beta=0.05, alpha=1.0):
         """
         data: batch issu du DataLoader
         beta: pondère la partie KLD
@@ -161,8 +164,7 @@ class VariationalAutoEncoder(nn.Module):
         prop_loss = 0.0
         for i in range(adj_recon.size(0)):
             # calcule les propriétés du graphe reconstruit i
-            #prop_est = compute_graph_properties(adj_recon[i])
-            prop_est = compute_graph_properties_approx(adj_recon[i])  # approximatif
+            prop_est = compute_graph_properties(adj_recon[i])
             # compare à data.stats[i] (dimension (7,))
             prop_loss += F.l1_loss(prop_est, data.stats[i], reduction='mean')
         prop_loss = prop_loss / adj_recon.size(0)
@@ -172,8 +174,7 @@ class VariationalAutoEncoder(nn.Module):
 
         return loss, recon_loss, kld, prop_loss
 
-
-    def loss_function(self, data, min_max, beta=0.05, alpha=1.0, property_calc_ratio=0.2):
+    def loss_function_prop_approx(self, data, min_max, beta=0.05, alpha=1.0, property_calc_ratio=0.2):
         """
         data: batch issu du DataLoader
         beta: pondère la partie KLD
@@ -230,6 +231,45 @@ class VariationalAutoEncoder(nn.Module):
             
             # Normalisation par le nombre d’échantillons où on calcule la propriété
             prop_loss = prop_loss / nb_samples_prop
+
+        # Combine les pertes
+        loss = recon_loss + beta * kld + alpha * prop_loss
+
+        return loss, recon_loss, kld, prop_loss
+
+    def loss_function(self, data, means, stds, beta=0.05, alpha=1.0):
+        """
+        data: batch issu du DataLoader
+        min_max: Tensor contenant les min et max de chaque propriété pour normalisation
+        beta: pondère la partie KLD
+        alpha: pondère la partie property loss
+        """
+        # Encodage
+        x_g  = self.encoder(data)                # [batch_size, hidden_dim_enc]
+        mu = self.fc_mu(x_g)                     # [batch_size, latent_dim]
+        logvar = self.fc_logvar(x_g)             # [batch_size, latent_dim]
+        z = self.reparameterize(mu, logvar)      # [batch_size, latent_dim]
+
+        # Reconstruction d’adjacence
+        adj_recon = self.decoder(z)              # [batch_size, n_max_nodes, n_max_nodes]
+
+        # 1) Perte de reconstruction (ici L1, vous pouvez essayer L2, BCE, etc.)
+        recon_loss = F.l1_loss(adj_recon, data.A, reduction='mean')
+
+        # 2) KLD du VAE
+        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        kld = kld / adj_recon.size(0)  # Normaliser par batch size
+
+        # 3) Property loss sur tout le batch
+        # Normalisation pour éviter de dépasser les bornes min/max
+
+        # Prédiction des propriétés pour tout le batch
+        prop_est = self.predictor(adj_recon)  # [batch_size, 7]
+        prop_target = data.stats
+        prop_target_scaled = (prop_target - means) / stds
+
+        # Calcul de la loss (MAE entre propriétés prédictes et cibles)
+        prop_loss = F.l1_loss(prop_est, prop_target_scaled, reduction='mean')
 
         # Combine les pertes
         loss = recon_loss + beta * kld + alpha * prop_loss

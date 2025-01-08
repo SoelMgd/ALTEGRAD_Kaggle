@@ -25,6 +25,8 @@ from autoencoder import VariationalAutoEncoder
 from denoise_model import DenoiseNN, p_losses, sample
 from utils import linear_beta_schedule, construct_nx_from_adj, preprocess_dataset
 
+from prop_predictor import PropertyPredictorMLP
+
 
 from torch.utils.data import Subset
 np.random.seed(13)
@@ -129,9 +131,47 @@ for data in train_loader:
         min_max[i, 1] = max(min_max[i, 1], torch.max(data.stats[:, i]))
 min_max = min_max.to(device)
 
+means = torch.mean(data.stats, dim=0)
+stds = torch.std(data.stats, dim=0)
+
+# Train property predictor model
+train_adj = [data.A.squeeze(0) for data in trainset]
+train_props = [data.stats.squeeze(0) for data in trainset]
+val_adj = [data.A.squeeze(0) for data in validset]
+val_props = [data.stats.squeeze(0) for data in validset]
+train_props_stand = [(prop - means) / stds for prop in train_props]
+val_props_stand = [(prop - means) / stds for prop in val_props]
+num_epochs = 100
+predictor = PropertyPredictorMLP(input_dim=50*50, hidden_dim=128, output_dim=7)  # Exemple avec MLP
+optimizer = torch.optim.Adam(predictor.parameters(), lr=1e-3)
+loss_fn = nn.MSELoss()
+
+for epoch in range(num_epochs):
+    loss_all = 0
+    for adj, props in zip(train_adj, train_props):
+        adj = adj.to(device)
+        props = props.to(device)
+        optimizer.zero_grad()
+        preds = predictor(adj)
+        loss = loss_fn(preds, props)
+        loss_all += loss.item()
+        loss.backward()
+        optimizer.step()
+        
+    with torch.no_grad():
+        val_loss = 0
+        for adj, props in zip(val_adj, val_props):
+            adj = adj.to(device)
+            props = props.to(device)
+            preds = predictor(adj)
+            val_loss += loss_fn(preds, props)
+        print(f'Epoch {epoch}, Train loss: {loss_all/len(trainset)},
+              Val loss: {val_loss/len(validset)}')
+        
+torch.save(predictor.state_dict(), 'predictor.pth')
 
 # initialize VGAE model
-autoencoder = VariationalAutoEncoder(args.spectral_emb_dim+1, args.hidden_dim_encoder, args.hidden_dim_decoder, args.latent_dim, args.n_layers_encoder, args.n_layers_decoder, args.n_max_nodes).to(device)
+autoencoder = VariationalAutoEncoder(args.spectral_emb_dim+1, args.hidden_dim_encoder, args.hidden_dim_decoder, args.latent_dim, args.n_layers_encoder, args.n_layers_decoder, args.n_max_nodes, predictor).to(device)
 
 optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
@@ -152,7 +192,7 @@ if args.train_autoencoder:
         for data in train_loader:
             data = data.to(device)
             optimizer.zero_grad()
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, min_max)
+            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
             train_loss_all_recon += recon.item()
             train_loss_all_kld += kld.item()
             train_loss_all_prop += prop_loss.item()
@@ -172,7 +212,7 @@ if args.train_autoencoder:
 
         for data in val_loader:
             data = data.to(device)
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, min_max)
+            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
             val_loss_all_recon += recon.item()
             val_loss_all_kld += kld.item()
             val_loss_all += loss.item()
