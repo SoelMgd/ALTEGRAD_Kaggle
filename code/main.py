@@ -110,9 +110,9 @@ args = parser.parse_args()
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # preprocess train data, validation data and test data. Only once for the first time that you run the code. Then the appropriate .pt files will be saved and loaded.
-trainset = preprocess_dataset("train", args.n_max_nodes, args.spectral_emb_dim)
-validset = preprocess_dataset("valid", args.n_max_nodes, args.spectral_emb_dim)
-testset = preprocess_dataset("test", args.n_max_nodes, args.spectral_emb_dim)
+trainset = preprocess_dataset("train", args.n_max_nodes, args.spectral_emb_dim, args.preprocess)
+validset = preprocess_dataset("valid", args.n_max_nodes, args.spectral_emb_dim, args.preprocess)
+testset = preprocess_dataset("test", args.n_max_nodes, args.spectral_emb_dim, args.preprocess)
 
 
 
