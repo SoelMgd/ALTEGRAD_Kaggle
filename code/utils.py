@@ -128,8 +128,8 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim, preprocess=False)
                 mn+=1
                 print(f"eigvecs.shape: {eigvecs.shape}, spectral_emb_dim: {spectral_emb_dim}")
 
-                #x[:,1:mn] = eigvecs[:,:spectral_emb_dim]
-                x[:,1:mn+1] = eigvecs[:,:mn]
+                x[:,1:mn] = eigvecs[:,:spectral_emb_dim]
+
                 adj = F.pad(adj, [0, size_diff, 0, size_diff])
                 adj = adj.unsqueeze(0)
 
