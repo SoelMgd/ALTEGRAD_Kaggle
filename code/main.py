@@ -357,6 +357,11 @@ with torch.no_grad():
         prop_pred_true = torch.zeros_like(prop_pred_est)
         for i in range(bs):
             prop_pred_true[i] = compute_graph_properties(adj[i])
+            print(f'Graph {i} properties pred: {prop_pred_true[i]}')
+            print(f'properties true: {stat[i]}')
+            print(adj[i,:,:])
+            print('\n')
+            
 
         # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
         prop_pred_est_scaled = (prop_pred_est - means) / stds
