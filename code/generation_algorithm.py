@@ -172,30 +172,32 @@ def pipe():
     results = []
     limit = 5
     for i, graph_file in enumerate(sorted(os.listdir(graph_dir))):
-        while i < limit:
-            graph_path = os.path.join(graph_dir, graph_file)
-            
-            # Statistiques vraies
-            true_stats_graph = extract_statistics_from_graph(graph_path)
-            
-            # Génération d'un graphe
-            generated_graph = generate_graph(*true_stats_graph)
-            
-            # Statistiques générées
-            generated_stats = extract_statistics_from_graph(graph_path)
-            
-            # Normalisation
-            true_stats_normalized = (np.array(true_stats_graph)- mean_stats)/ std_stats
-            generated_stats_normalized = (np.array(generated_stats)- mean_stats)/ std_stats
-            
-            # Enregistrement des résultats
-            results.append({
-                "graph_id": i,
-                "true_stats": true_stats_normalized.tolist(),
-                "generated_stats": generated_stats_normalized.tolist()
-            })
-            print("Graph ", i, results[-1])
-    
+        if i >= limit:
+            break 
+        
+        graph_path = os.path.join(graph_dir, graph_file)
+        
+        # Statistiques vraies
+        true_stats_graph = extract_statistics_from_graph(graph_path)
+        
+        # Génération d'un graphe
+        generated_graph = generate_graph(*true_stats_graph)
+        
+        # Statistiques générées
+        generated_stats = extract_statistics_from_graph(graph_path)
+        
+        # Normalisation
+        true_stats_normalized = (np.array(true_stats_graph)- mean_stats)/ std_stats
+        generated_stats_normalized = (np.array(generated_stats)- mean_stats)/ std_stats
+        
+        # Enregistrement des résultats
+        results.append({
+            "graph_id": i,
+            "true_stats": true_stats_normalized.tolist(),
+            "generated_stats": generated_stats_normalized.tolist()
+        })
+        print("Graph ", i, results[-1])
+
     # Calcul du score MAE
     mae = np.mean([np.abs(np.array(r["true_stats"])[:limit] - np.array(r["generated_stats"])[:limit]).mean() for r in results])
     print(f"Mean Absolute Error (MAE): {mae}")
