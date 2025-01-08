@@ -217,7 +217,7 @@ def pipe_valid():
     # Génération et évaluation
     print("[INFO] Génération")
     results = []
-    limit = 5
+    limit = np.inf
     for i, graph_file in enumerate(sorted(os.listdir(graph_dir))):
         if i >= limit:
             break 
