@@ -116,17 +116,17 @@ class UNetBlock(nn.Module):
 class UNet(nn.Module):
     def __init__(self, latent_dim, cond_dim, cond_input_dim, n_layers):
         def __init__(self, latent_dim, cond_dim, cond_input_dim, n_layers):
-        super(UNet, self).__init__()
-        self.encoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
-        self.middle = UNetBlock(latent_dim, cond_input_dim)
-        self.decoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
+            super(UNet, self).__init__()
+            self.encoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
+            self.middle = UNetBlock(latent_dim, cond_input_dim)
+            self.decoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
         
-        # Time embeddings
-        self.time_mlp = nn.Sequential(
-            SinusoidalPositionEmbeddings(latent_dim),
-            nn.Linear(latent_dim, latent_dim),
-            nn.ReLU(),
-        )
+            # Time embeddings
+            self.time_mlp = nn.Sequential(
+                SinusoidalPositionEmbeddings(latent_dim),
+                nn.Linear(latent_dim, latent_dim),
+                nn.ReLU(),
+            )
 
     def forward(self, x, t, cond):
         # Embed time step
