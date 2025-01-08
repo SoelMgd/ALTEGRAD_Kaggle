@@ -131,8 +131,8 @@ for data in train_loader:
         min_max[i, 1] = max(min_max[i, 1], torch.max(data.stats[:, i]))
 min_max = min_max.to(device)
 
-means = torch.mean(data.stats, dim=0)
-stds = torch.std(data.stats, dim=0)
+means = torch.mean(data.stats, dim=0).to(device)
+stds = torch.std(data.stats, dim=0).to(device)
 
 # Train property predictor model
 # train_adj = [data.A.squeeze(0) for data in trainset]
