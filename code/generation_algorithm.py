@@ -212,7 +212,7 @@ def pipe():
         generated_graph = generate_graph(*true_stats_graph)
         
         # Statistiques générées
-        generated_stats = extract_statistics_from_graph(graph_path)
+        generated_stats = extract_statistics_from_graph(generated_graph)
         
         # Normalisation
         true_stats_normalized = (np.array(true_stats_graph)- mean_stats)/ std_stats
