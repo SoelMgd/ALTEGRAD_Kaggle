@@ -35,23 +35,47 @@ def adjust_edges(graph, target_edges, target_average_degree):
         current_edges -= 1
     return graph
 
-def add_triangles(graph, target_triangles):
-    """Ajoute des triangles au graphe pour se rapprocher de la cible."""
+def add_triangles(graph, target_triangles, max_attempts=50):
+    """
+    Ajoute des triangles au graphe pour se rapprocher de la cible.
+    Limite le nombre d'itérations pour éviter les boucles infinies.
+    
+    Parameters:
+        graph (nx.Graph): Le graphe à modifier.
+        target_triangles (int): Nombre cible de triangles.
+        max_attempts (int): Nombre maximum de tentatives pour ajouter des triangles.
+    """
     current_triangles = sum(nx.triangles(graph).values()) // 3
-    while current_triangles < target_triangles:
+    attempts = 0
+
+    while current_triangles < target_triangles and attempts < max_attempts:
+        attempts += 1
+        
         # Trouver deux voisins d'un nœud qui ne sont pas connectés
         nodes = list(graph.nodes)
-        random.shuffle(nodes)
+        random.shuffle(nodes)  # Mélanger les nœuds pour diversifier les tentatives
+        
+        triangle_added = False
         for u in nodes:
             neighbors = list(graph.neighbors(u))
             if len(neighbors) < 2:
                 continue
             v, w = random.sample(neighbors, 2)
             if not graph.has_edge(v, w):
-                graph.add_edge(v, w)
+                graph.add_edge(v, w)  # Ajouter l'arête pour former un triangle
                 current_triangles += 1
+                triangle_added = True
                 break
+        
+        # Si aucun triangle n'a pu être ajouté, on arrête
+        if not triangle_added:
+            break
+
+    if attempts == max_attempts:
+        print(f"[WARNING] Reached max attempts ({max_attempts}) while adding triangles.")
+    
     return graph
+
 
 
 def validate_and_adjust(graph, target_params):
