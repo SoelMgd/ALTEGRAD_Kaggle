@@ -290,30 +290,37 @@ import pandas as pd
 def extract_test_statistics(line):
     """
     Extrait les statistiques d'une ligne de description dans le test set.
-    
+
     Parameters:
         line (str): Ligne contenant la description du graphe.
-    
+
     Returns:
         tuple: (graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities])
     """
-    parts = line.split(",")  # Sépare l'ID du graphe de sa description
+    # Séparer l'ID du graphe et la description
+    parts = line.split(",")
+    if len(parts) != 2:
+        raise ValueError(f"Ligne mal formatée : {line}")
+    
     graph_id = parts[0]
     description = parts[1]
-    
-    # Extraire les nombres de la description
-    numbers = re.findall(r'\d+\.\d+|\d+', description)
-    if len(numbers) < 7:
+
+    # Extraire les nombres depuis la description
+    stats = extract_feats(description)
+
+    # Vérifier qu'il y a assez de valeurs
+    if len(stats) < 7:
         raise ValueError(f"La description du graphe {graph_id} est incomplète : {description}")
     
-    # Extraire les statistiques nécessaires
-    n_nodes = int(numbers[0])
-    n_edges = int(numbers[1])
-    average_degree = float(numbers[2])
-    n_triangles = int(numbers[3])
-    n_communities = int(numbers[6])
-    
+    # Sélectionner les statistiques nécessaires
+    n_nodes = int(stats[0])  # 1er nombre
+    n_edges = int(stats[1])  # 2ème nombre
+    average_degree = float(stats[2])  # 3ème nombre
+    n_triangles = int(stats[3])  # 4ème nombre
+    n_communities = int(stats[6])  # 7ème nombre
+
     return graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
 
 # Génération des graphes et construction du CSV
 def pipe_test():
