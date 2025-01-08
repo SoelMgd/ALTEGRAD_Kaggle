@@ -106,6 +106,9 @@ parser.add_argument('--n-condition', type=int, default=7, help="Number of distin
 # Preprocess train data, validation data and test data. if put on True
 parser.add_argument('--preprocess', action='store_true', default=False, help="Preprocess train data, validation data and test data. if put on True (default: False)")
 
+# Use the old loss
+parser.add_argument('--old_loss', action='store_true', default=False, help="Use the old loss (default: False)")
+
 
 args = parser.parse_args()
 
@@ -191,7 +194,11 @@ if args.train_autoencoder:
         for data in train_loader:
             data = data.to(device)
             optimizer.zero_grad()
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
+            if args.old_loss:
+                loss, recon, kld  = autoencoder.loss_function_old(data)
+                prop_loss = torch.tensor(0)
+            else:
+                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
             train_loss_all_recon += recon.item()
             train_loss_all_kld += kld.item()
             train_loss_all_prop += prop_loss.item()
@@ -211,7 +218,11 @@ if args.train_autoencoder:
 
         for data in val_loader:
             data = data.to(device)
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
+            if args.old_loss:
+                loss, recon, kld  = autoencoder.loss_function_old(data)
+                prop_loss = torch.tensor(0)
+            else:
+                loss, recon, kld, prop_loss  = autoencoder.loss_function(data, means, stds)
             val_loss_all_recon += recon.item()
             val_loss_all_kld += kld.item()
             val_loss_all += loss.item()
@@ -310,7 +321,48 @@ else:
 
 denoise_model.eval()
 
-del train_loader, val_loader
+### Validation prop loss
+val_prop_loss_sum = 0.0
+val_count = 0
+
+with torch.no_grad():
+    for data in val_loader:
+        data = data.to(device)
+        stat = data.stats                 # (batch_size, 7)
+        bs = stat.size(0)
+
+        # 1) On sample depuis le denoiser (diffusion)
+        samples = sample(
+            model=denoise_model,
+            cond=stat,                   # Les conditions = propriétés cibles
+            latent_dim=args.latent_dim,
+            timesteps=args.timesteps,
+            betas=betas,
+            batch_size=bs
+        )
+        x_sample = samples[-1]           # Dernier état x_T après diffusion inversée
+
+        # 2) On décode via l’autoencodeur => matrice d’adjacence "soft"
+        adj = autoencoder.decode_mu(x_sample)  # [bs, n, n]
+
+        # 3) On prédit les propriétés
+        prop_est = autoencoder.predicator(adj)  # [bs, 7]
+
+        # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
+        prop_est_scaled = (prop_est - means) / stds
+        prop_target_scaled = (stat - means) / stds
+
+        # 5) On calcule une loss L1 (MAE) entre prop_est_scaled et prop_target_scaled
+        prop_loss_batch = F.l1_loss(prop_est_scaled, prop_target_scaled, reduction='mean')
+
+        # On accumule pour faire la moyenne sur l'ensemble du set de validation
+        val_prop_loss_sum += prop_loss_batch.item() * bs
+        val_count += bs
+
+val_prop_loss_mean = val_prop_loss_sum / val_count
+print(f"[Validation] Property Loss (diffusion+decode) = {val_prop_loss_mean:.4f}")
+###
+
 
 # Save to a CSV file
 with open("output.csv", "w", newline="") as csvfile:
