@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from torch_geometric.nn import GINConv
 from torch_geometric.nn import global_add_pool
 
+import numpy as np
+
 from utils import compute_graph_properties
 
 # Decoder
@@ -134,7 +136,7 @@ class VariationalAutoEncoder(nn.Module):
 
         return loss, recon, kld
         
-    def loss_function(self, data, beta=0.05, alpha=1.0):
+    def loss_function_old2(self, data, beta=0.05, alpha=1.0):
         """
         data: batch issu du DataLoader
         beta: pondère la partie KLD
@@ -169,3 +171,61 @@ class VariationalAutoEncoder(nn.Module):
 
         return loss, recon_loss, kld, prop_loss
 
+
+    def loss_function(self, data, beta=0.05, alpha=1.0, property_calc_ratio=0.2):
+        """
+        data: batch issu du DataLoader
+        beta: pondère la partie KLD
+        alpha: pondère la partie property loss
+        property_calc_ratio: fraction du batch où l'on calcule le property loss
+                             (entre 0 et 1, ex: 0.2 = 20% du batch)
+        """
+
+        # Encodage
+        x_g  = self.encoder(data)                # [batch_size, hidden_dim_enc]
+        mu = self.fc_mu(x_g)                     # [batch_size, latent_dim]
+        logvar = self.fc_logvar(x_g)             # [batch_size, latent_dim]
+        z = self.reparameterize(mu, logvar)      # [batch_size, latent_dim]
+
+        # Reconstruction d’adjacence
+        adj_recon = self.decoder(z)              # [batch_size, n_max_nodes, n_max_nodes]
+
+        # 1) Perte de reconstruction (ici L1, vous pouvez essayer L2, BCE, etc.)
+        recon_loss = F.l1_loss(adj_recon, data.A, reduction='mean')
+
+        # 2) KLD du VAE
+        kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        # on peut normaliser par batch_size, à vous de voir
+        # kld = kld / adj_recon.size(0)
+
+        # 3) Property loss sur un sous-ensemble du batch
+        batch_size = adj_recon.size(0)
+        prop_loss = 0.0
+
+        # Calcul du nombre d’exemples où l’on va calculer les propriétés
+        if property_calc_ratio <= 0.0:
+            nb_samples_prop = 0
+        else:
+            nb_samples_prop = int(property_calc_ratio * batch_size)
+        
+        # Si nb_samples_prop est 0 (par ex. batch=1, ratio=0.2),
+        # on met juste 0 pour la property loss.
+        if nb_samples_prop > 0:
+            # On choisit au hasard nb_samples_prop indices dans [0..batch_size-1]
+            sample_indices = np.random.choice(batch_size, nb_samples_prop, replace=False)
+
+            # On calcule la property loss uniquement pour ces indices
+            for i in sample_indices:
+                prop_est = compute_graph_properties(adj_recon[i])   # (7,) par ex.
+                prop_target = data.stats[i]                         # (7,)
+
+                # MAE entre prop_est et prop_target
+                prop_loss += F.l1_loss(prop_est, prop_target, reduction='mean')
+            
+            # Normalisation par le nombre d’échantillons où on calcule la propriété
+            prop_loss = prop_loss / nb_samples_prop
+
+        # Combine les pertes
+        loss = recon_loss + beta * kld + alpha * prop_loss
+
+        return loss, recon_loss, kld, prop_loss
