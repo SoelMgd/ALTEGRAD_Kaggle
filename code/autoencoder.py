@@ -63,7 +63,7 @@ class GIN(torch.nn.Module):
     def forward(self, data):
         edge_index = data.edge_index
         x = data.x
-        print(f"x.shape: {x.shape}, edge_index.shape: {edge_index.shape}")
+        #print(f"x.shape: {x.shape}, edge_index.shape: {edge_index.shape}")
 
         for conv in self.convs:
             x = conv(x, edge_index)
@@ -87,7 +87,7 @@ class VariationalAutoEncoder(nn.Module):
         self.decoder = Decoder(latent_dim, hidden_dim_dec, n_layers_dec, n_max_nodes)
 
     def forward(self, data):
-        print(f"data.x.shape: {data.x.shape}, input_dim: {self.encoder.convs[0].nn[0].in_features}")
+        #print(f"data.x.shape: {data.x.shape}, input_dim: {self.encoder.convs[0].nn[0].in_features}")
         x_g = self.encoder(data)
         mu = self.fc_mu(x_g)
         logvar = self.fc_logvar(x_g)
