@@ -401,45 +401,45 @@ def generate_graph_from_features(features, max_iter=1000):
     adj_matrix = nx.to_numpy_array(G)
     return adj_matrix
 
-# Exemple d'utilisation
-### Validation prop loss
-val_prop_loss_sum = 0.0
-val_prop_loss_true_sum = 0.0
-val_count = 0
+# # Exemple d'utilisation
+# ### Validation prop loss
+# val_prop_loss_sum = 0.0
+# val_prop_loss_true_sum = 0.0
+# val_count = 0
 
-with torch.no_grad():
-    for data in val_loader:
-        data = data.to(device)
-        stat = data.stats                 # (batch_size, 7)
-        bs = stat.size(0)
+# with torch.no_grad():
+#     for data in val_loader:
+#         data = data.to(device)
+#         stat = data.stats                 # (batch_size, 7)
+#         bs = stat.size(0)
         
         
-        prop_pred_true = torch.zeros(bs, 7)
+#         prop_pred_true = torch.zeros(bs, 7)
 
-        for i in range(bs):
-            adj = generate_graph_from_features(stat[i].cpu().numpy())
-            prop_pred_true[i] = compute_graph_properties(torch.tensor(adj))
-            print(f'Graph {i} properties pred: {prop_pred_true[i]}')
-            print(f'properties true: {stat[i]}')
-            #print(adj[i,:,:])
-            print('\n')
+#         for i in range(bs):
+#             adj = generate_graph_from_features(stat[i].cpu().numpy())
+#             prop_pred_true[i] = compute_graph_properties(torch.tensor(adj))
+#             print(f'Graph {i} properties pred: {prop_pred_true[i]}')
+#             print(f'properties true: {stat[i]}')
+#             #print(adj[i,:,:])
+#             print('\n')
             
 
-        # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
-        prop_target_scaled = (stat.cpu() - means.cpu()) / stds.cpu()
-        prop_pred_true_scaled = (prop_pred_true.cpu() - means.cpu()) / stds.cpu()
+#         # 4) On compare aux propriétés cibles (stat) en tenant compte de la normalisation
+#         prop_target_scaled = (stat.cpu() - means.cpu()) / stds.cpu()
+#         prop_pred_true_scaled = (prop_pred_true.cpu() - means.cpu()) / stds.cpu()
 
-        # 5) On calcule une loss L1 (MAE) entre prop_est_scaled et prop_target_scaled
-        prop_loss_batch_true = F.l1_loss(prop_pred_true_scaled, prop_target_scaled, reduction='mean')
+#         # 5) On calcule une loss L1 (MAE) entre prop_est_scaled et prop_target_scaled
+#         prop_loss_batch_true = F.l1_loss(prop_pred_true_scaled, prop_target_scaled, reduction='mean')
 
-        # On accumule pour faire la moyenne sur l'ensemble du set de validation
-        val_prop_loss_true_sum += prop_loss_batch_true.item() * bs
-        val_count += bs
+#         # On accumule pour faire la moyenne sur l'ensemble du set de validation
+#         val_prop_loss_true_sum += prop_loss_batch_true.item() * bs
+#         val_count += bs
 
-val_prop_loss_mean = val_prop_loss_sum / val_count
-val_prop_loss_mean_true = val_prop_loss_true_sum / val_count
-print(f"[Validation] Property Loss (true) = {val_prop_loss_mean_true:.4f}")
-###
+# val_prop_loss_mean = val_prop_loss_sum / val_count
+# val_prop_loss_mean_true = val_prop_loss_true_sum / val_count
+# print(f"[Validation] Property Loss (true) = {val_prop_loss_mean_true:.4f}")
+# ###
 
 # Save to a CSV file
 with open("output_determinist.csv", "w", newline="") as csvfile:
