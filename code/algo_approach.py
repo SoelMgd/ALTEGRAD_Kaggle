@@ -466,7 +466,6 @@ with open("output_determinist.csv", "w", newline="") as csvfile:
             
 
             Gs_generated = construct_nx_from_adj(adj)
-            stat_x = stat_x.detach().cpu().numpy()
 
             # Define a graph ID
             graph_id = graph_ids[i] 
