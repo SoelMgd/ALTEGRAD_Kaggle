@@ -281,5 +281,75 @@ def pipe_valid():
     #results_df.to_csv("results.csv", index=False)
 
 
-pipe_valid()
+import os
+import re
+import networkx as nx
+import pandas as pd
+
+# Extraction des statistiques depuis une ligne de description
+def extract_test_statistics(line):
+    """
+    Extrait les statistiques d'une ligne de description dans le test set.
+    
+    Parameters:
+        line (str): Ligne contenant la description du graphe.
+    
+    Returns:
+        tuple: (graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities])
+    """
+    parts = line.split(",")  # Sépare l'ID du graphe de sa description
+    graph_id = parts[0]
+    description = parts[1]
+    
+    # Extraire les nombres de la description
+    numbers = re.findall(r'\d+\.\d+|\d+', description)
+    if len(numbers) < 7:
+        raise ValueError(f"La description du graphe {graph_id} est incomplète : {description}")
+    
+    # Extraire les statistiques nécessaires
+    n_nodes = int(numbers[0])
+    n_edges = int(numbers[1])
+    average_degree = float(numbers[2])
+    n_triangles = int(numbers[3])
+    n_communities = int(numbers[6])
+    
+    return graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
+# Génération des graphes et construction du CSV
+def pipe_test():
+    # Chemin du fichier test set
+    test_file = "../data/test/test.txt"
+    output_csv = "output_gen.csv"
+    
+    # Lire les descriptions
+    print("[INFO] Lecture des descriptions")
+    with open(test_file, "r") as f:
+        lines = f.readlines()
+    
+    results = []
+    
+    for line in lines:
+        # Extraction des statistiques
+        graph_id, stats = extract_test_statistics(line.strip())
+        
+        # Génération du graphe
+        generated_graph = generate_graph(*stats)
+        
+        # Transformation en liste d'arêtes sous forme de chaîne
+        edge_list = ", ".join(f"({u},{v})" for u, v in generated_graph.edges())
+        
+        # Enregistrement des résultats
+        results.append({"graph_id": graph_id, "edge_list": edge_list})
+        print(f"[INFO] Graph {graph_id} généré avec {generated_graph.number_of_edges()} arêtes.")
+    
+    # Sauvegarde dans un fichier CSV
+    print("[INFO] Sauvegarde des résultats dans le fichier output_gen.csv")
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+
+# Lancer la pipeline
+pipe_test()
+
+
+#pipe_valid()
 
