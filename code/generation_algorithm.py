@@ -281,10 +281,23 @@ def pipe_valid():
     #results_df.to_csv("results.csv", index=False)
 
 
-import os
-import re
-import networkx as nx
-import pandas as pd
+#### PIPE TEST
+
+def extract_feats_from_text(text):
+    """
+    Extrait les statistiques depuis une chaîne de texte.
+    
+    Parameters:
+        text (str): Chaîne contenant la description.
+    
+    Returns:
+        list: Liste des nombres extraits.
+    """
+    # Utilise extract_numbers pour extraire les nombres
+    stats = extract_numbers(text.strip())
+    return stats
+
+
 
 # Extraction des statistiques depuis une ligne de description
 def extract_test_statistics(line):
@@ -306,7 +319,7 @@ def extract_test_statistics(line):
     description = parts[1]
 
     # Extraire les nombres depuis la description
-    stats = extract_feats(description)
+    stats = extract_feats_from_text(description)
 
     # Vérifier qu'il y a assez de valeurs
     if len(stats) < 7:
@@ -320,6 +333,7 @@ def extract_test_statistics(line):
     n_communities = int(stats[6])  # 7ème nombre
 
     return graph_id, [n_nodes, n_edges, average_degree, n_triangles, n_communities]
+
 
 
 # Génération des graphes et construction du CSV
