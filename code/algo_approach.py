@@ -223,7 +223,7 @@ with torch.no_grad():
 
         for i in range(bs):
             adj = generate_graph_from_features(stat[i].cpu().numpy())
-            prop_pred_true[i] = compute_graph_properties(adj[i])
+            prop_pred_true[i] = compute_graph_properties(torch.tensor(adj))
             print(f'Graph {i} properties pred: {prop_pred_true[i]}')
             print(f'properties true: {stat[i]}')
             #print(adj[i,:,:])
