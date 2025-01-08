@@ -160,9 +160,9 @@ def extract_statistics_from_description(file):
 
 
 
-def extract_statistics_from_graph(graph_path):
+def extract_statistics_from_graph(graph):
     """Charge un graphe depuis un fichier et calcule ses statistiques."""
-    graph = nx.read_edgelist(graph_path)
+    #graph = nx.read_edgelist(graph_path)
     n_nodes = graph.number_of_nodes()
     n_edges = graph.number_of_edges()
     average_degree = sum(dict(graph.degree).values()) / n_nodes if n_nodes > 0 else 0
