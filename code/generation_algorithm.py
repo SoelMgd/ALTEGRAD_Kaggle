@@ -132,7 +132,7 @@ def extract_statistics_from_graph(graph_path):
 
 ### PIPELINE
 
-def main():
+def pipe():
     # Dossiers et fichiers
     description_dir = "../data/train/description/"
     graph_dir = "../data/valid/graph/"
@@ -183,6 +183,6 @@ def main():
     #results_df = pd.DataFrame(results)
     #results_df.to_csv("results.csv", index=False)
 
-
-    main()
+print("debut")
+pipe()
 
