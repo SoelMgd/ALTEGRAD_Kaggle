@@ -191,7 +191,7 @@ def extract_statistics_from_graph(graph_input):
 
 ### PIPELINE
 
-def pipe():
+def pipe_valid():
     # Dossiers et fichiers
     description_dir = "../data/train/description/"
     graph_dir = "../data/valid/graph/"
@@ -213,7 +213,7 @@ def pipe():
     # Génération et évaluation
     print("[INFO] Génération")
     results = []
-    limit = 5
+    limit = np.inf
     for i, graph_file in enumerate(sorted(os.listdir(graph_dir))):
         if i >= limit:
             break 
