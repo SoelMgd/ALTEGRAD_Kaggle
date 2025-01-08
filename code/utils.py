@@ -21,14 +21,14 @@ from extract_feats import extract_feats, extract_numbers
 
 
 
-def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
+def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim, preprocess=False):
 
     data_lst = []
     if dataset == 'test':
         filename = './data/dataset_'+dataset+'.pt'
         desc_file = './data/'+dataset+'/test.txt'
 
-        if os.path.isfile(filename):
+        if os.path.isfile(filename) and not preprocess:
             data_lst = torch.load(filename)
             print(f'Dataset {filename} loaded from file')
 
@@ -53,7 +53,7 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
         graph_path = './data/'+dataset+'/graph'
         desc_path = './data/'+dataset+'/description'
 
-        if os.path.isfile(filename):
+        if os.path.isfile(filename) and not preprocess:
             data_lst = torch.load(filename)
             print(f'Dataset {filename} loaded from file')
 
@@ -134,9 +134,9 @@ def preprocess_dataset(dataset, n_max_nodes, spectral_emb_dim):
                 adj = adj.unsqueeze(0)
 
                 feats_stats = extract_feats(fstats)
+                
                 feats_stats = torch.FloatTensor(feats_stats).unsqueeze(0)
                 print(f"x.shape: {x.shape}")
-
 
                 data_lst.append(Data(x=x, edge_index=edge_index, A=adj, stats=feats_stats, filename = filen))
             torch.save(data_lst, filename)

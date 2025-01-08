@@ -101,6 +101,10 @@ parser.add_argument('--dim-condition', type=int, default=128, help="Dimensionali
 # Number of conditions used in conditional vector (number of properties)
 parser.add_argument('--n-condition', type=int, default=7, help="Number of distinct condition properties used in conditional vector (default: 7)")
 
+# Preprocess train data, validation data and test data. if put on True
+parser.add_argument('--preprocess', action='store_true', default=False, help="Preprocess train data, validation data and test data. if put on True (default: False)")
+
+
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
