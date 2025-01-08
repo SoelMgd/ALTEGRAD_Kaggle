@@ -253,11 +253,13 @@ else:
 
 denoise_model.eval()
 
-del train_loader, val_loader
+del train_loader #, val_loader
 
 # Computing MAE
 mae = compute_mae(denoise_model, autoencoder, val_loader, latent_dim=32, timesteps=args.timesteps, betas=betas, device=device)
 print(f"Mean Absolute Error (MAE) on validation set: {mae:.4f}")
+
+del val_loader
 
 # Save to a CSV file
 with open("output.csv", "w", newline="") as csvfile:
