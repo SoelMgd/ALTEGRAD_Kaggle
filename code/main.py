@@ -24,6 +24,7 @@ from torch_geometric.loader import DataLoader
 from autoencoder import VariationalAutoEncoder
 from denoise_model import DenoiseNN, p_losses, sample
 from utils import linear_beta_schedule, construct_nx_from_adj, preprocess_dataset
+from MAE import compute_mae
 
 
 from torch.utils.data import Subset
@@ -253,6 +254,10 @@ else:
 denoise_model.eval()
 
 del train_loader, val_loader
+
+# Computing MAE
+mae = compute_mae(denoise_model, autoencoder, val_loader, latent_dim=32, timesteps=args.timesteps, betas=betas, device=device)
+print(f"Mean Absolute Error (MAE) on validation set: {mae:.4f}")
 
 # Save to a CSV file
 with open("output.csv", "w", newline="") as csvfile:
