@@ -62,12 +62,22 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class CrossAttentionBlock(nn.Module):
     def __init__(self, latent_dim, cond_dim):
         super(CrossAttentionBlock, self).__init__()
+
+
+        # Add a projection layer for cond if necessary
+        self.cond_proj = nn.Linear(cond_dim, latent_dim)
+
+
         self.q_proj = nn.Linear(latent_dim, latent_dim)
         self.k_proj = nn.Linear(cond_dim, latent_dim)
         self.v_proj = nn.Linear(cond_dim, latent_dim)
         self.out_proj = nn.Linear(latent_dim, latent_dim)
 
     def forward(self, x, cond):
+
+        cond = self.cond_proj(cond)
+
+        
         # Query, Key, Value
         Q = self.q_proj(x)  # [batch_size, latent_dim]
         K = self.k_proj(cond)  # [batch_size, cond_dim]
