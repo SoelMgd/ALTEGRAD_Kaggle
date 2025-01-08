@@ -161,6 +161,12 @@ def generate_graph_from_features(features):
     """
     # Extraction des propriétés
     num_nodes, num_edges, avg_degree, num_triangles, clustering_coeff, max_kcore, num_communities = features
+    num_nodes = int(num_nodes)
+    num_edges = int(num_edges)
+    num_triangles = int(num_triangles)
+    max_kcore = int(max_kcore)
+    num_communities = int(num_communities)  
+    
 
     # Étape 1 : Initialisation du graphe
     G = nx.Graph()
