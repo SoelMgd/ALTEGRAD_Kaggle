@@ -102,7 +102,6 @@ parser.add_argument('--dim-condition', type=int, default=128, help="Dimensionali
 parser.add_argument('--n-condition', type=int, default=7, help="Number of distinct condition properties used in conditional vector (default: 7)")
 
 args = parser.parse_args()
-print(args)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -114,7 +113,6 @@ testset = preprocess_dataset("test", args.n_max_nodes, args.spectral_emb_dim)
 
 
 # initialize data loaders
-
 train_loader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
 val_loader = DataLoader(validset, batch_size=args.batch_size, shuffle=False)
 test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
