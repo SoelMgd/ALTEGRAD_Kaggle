@@ -127,6 +127,7 @@ for data in train_loader:
     for i in range(7):
         min_max[i, 0] = min(min_max[i, 0], torch.min(data.stats[:, i]))
         min_max[i, 1] = max(min_max[i, 1], torch.max(data.stats[:, i]))
+min_max = min_max.to(device)
 
 
 # initialize VGAE model
