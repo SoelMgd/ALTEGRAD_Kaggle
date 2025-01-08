@@ -204,9 +204,10 @@ posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
 
 # Initialize U-Net model for denoising
 denoise_model = UNet(
-    latent_dim=args.latent_dim, 
-    cond_dim=args.dim_condition, 
-    n_layers=args.n_layers_denoise
+    latent_dim=args.latent_dim,        # Dimension des vecteurs latents
+    cond_dim=args.dim_condition,      # Dimension finale des embeddings conditionnels 
+    cond_input_dim=7,                 # Nombre réel de statistiques
+    n_layers=args.n_layers_denoise    # Nombre de blocs dans le U-Net
 ).to(device)
 
 '''

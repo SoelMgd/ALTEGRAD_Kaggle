@@ -60,34 +60,33 @@ class SinusoidalPositionEmbeddings(nn.Module):
 
 # Attention Block for Cross-Attention with Statistics
 class CrossAttentionBlock(nn.Module):
-    def __init__(self, latent_dim, cond_dim):
+    def __init__(self, latent_dim, cond_input_dim):
         super(CrossAttentionBlock, self).__init__()
-
-
-        # Add a projection layer for cond if necessary
-        self.cond_proj = nn.Linear(cond_dim, latent_dim)
-
-
+        self.latent_dim = latent_dim
+        
+        # Add a projection layer for cond
+        self.cond_proj = nn.Linear(cond_input_dim, latent_dim)
+        
         self.q_proj = nn.Linear(latent_dim, latent_dim)
-        self.k_proj = nn.Linear(cond_dim, latent_dim)
-        self.v_proj = nn.Linear(cond_dim, latent_dim)
+        self.k_proj = nn.Linear(latent_dim, latent_dim)
+        self.v_proj = nn.Linear(latent_dim, latent_dim)
         self.out_proj = nn.Linear(latent_dim, latent_dim)
 
     def forward(self, x, cond):
-
+        # Project cond to the latent_dim space
         cond = self.cond_proj(cond)
-
         
         # Query, Key, Value
         Q = self.q_proj(x)  # [batch_size, latent_dim]
-        K = self.k_proj(cond)  # [batch_size, cond_dim]
-        V = self.v_proj(cond)  # [batch_size, cond_dim]
+        K = self.k_proj(cond)  # [batch_size, latent_dim]
+        V = self.v_proj(cond)  # [batch_size, latent_dim]
 
         # Attention
         attn_weights = torch.softmax(Q @ K.T / (K.size(-1) ** 0.5), dim=-1)
         attn_output = attn_weights @ V
 
         return self.out_proj(attn_output) + x
+
 
 
 # U-Net Block
@@ -115,11 +114,12 @@ class UNetBlock(nn.Module):
 
 # U-Net with Cross-Attention
 class UNet(nn.Module):
-    def __init__(self, latent_dim, cond_dim, n_layers):
+    def __init__(self, latent_dim, cond_dim, cond_input_dim, n_layers):
+        def __init__(self, latent_dim, cond_dim, cond_input_dim, n_layers):
         super(UNet, self).__init__()
-        self.encoder = nn.ModuleList([UNetBlock(latent_dim, cond_dim) for _ in range(n_layers)])
-        self.middle = UNetBlock(latent_dim, cond_dim)
-        self.decoder = nn.ModuleList([UNetBlock(latent_dim, cond_dim) for _ in range(n_layers)])
+        self.encoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
+        self.middle = UNetBlock(latent_dim, cond_input_dim)
+        self.decoder = nn.ModuleList([UNetBlock(latent_dim, cond_input_dim) for _ in range(n_layers)])
         
         # Time embeddings
         self.time_mlp = nn.Sequential(
