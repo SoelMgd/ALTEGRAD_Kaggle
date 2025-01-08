@@ -27,10 +27,10 @@ def calculate_graph_statistics(graph):
     ]
 
 # Function to compute MAE
-def compute_mae(denoiser, autoencoder, val_loader, latent_dim, timesteps, betas, device):
-    denoiser.eval()
-    mae_total = 0
-    num_graphs = 0
+def compute_mae(model, autoencoder, val_loader, latent_dim, timesteps, betas, device):
+    model.eval()
+    all_generated_stats = []
+    all_true_stats = []
 
     with torch.no_grad():
         for data in tqdm(val_loader, desc="Evaluating MAE"):
@@ -38,7 +38,7 @@ def compute_mae(denoiser, autoencoder, val_loader, latent_dim, timesteps, betas,
 
             # Perform inference
             generated_samples = sample(
-                denoiser, data.stats, latent_dim=latent_dim, timesteps=timesteps, betas=betas,
+                model, data.stats, latent_dim=latent_dim, timesteps=timesteps, betas=betas,
                 batch_size=data.stats.size(0)
             )
             x_sample = generated_samples[-1]
@@ -53,13 +53,28 @@ def compute_mae(denoiser, autoencoder, val_loader, latent_dim, timesteps, betas,
 
                 # Calculate statistics of generated graph
                 generated_stats = calculate_graph_statistics(graph)
+                all_generated_stats.append(generated_stats)
 
-                # Compare with ground truth statistics
+                # Collect true stats
                 true_stats = data.stats[i].detach().cpu().numpy()
-                mae_total += np.abs(np.array(generated_stats) - true_stats).mean()
-                num_graphs += 1
+                all_true_stats.append(true_stats)
 
-    return mae_total / num_graphs
+    # Convert to numpy arrays
+    all_generated_stats = np.array(all_generated_stats)
+    all_true_stats = np.array(all_true_stats)
+
+    # Normalize using mean and std of true stats
+    mean_stats = all_true_stats.mean(axis=0)
+    std_stats = all_true_stats.std(axis=0)
+
+    normalized_generated_stats = (all_generated_stats - mean_stats) / std_stats
+    normalized_true_stats = (all_true_stats - mean_stats) / std_stats
+
+    # Calculate MAE
+    mae_total = np.mean(np.abs(normalized_generated_stats - normalized_true_stats))
+    return mae_total
+
+
 
 if __name__ == "__main__":
     # Example usage
