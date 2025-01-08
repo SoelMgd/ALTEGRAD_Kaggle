@@ -94,7 +94,8 @@ if __name__ == "__main__":
         "latent_dim": [16, 32],
         "n_layers_encoder": [2, 3],
         "n_layers_decoder": [3, 4],
-        "epochs_autoencoder": [50],  # Use fewer epochs for quick evaluation
+        "epochs_autoencoder": [100],  # Use fewer epochs for quick evaluation
+        "epochs_denoise":[100], # Same because quick
         "n_max_nodes": [50],
         "spectral_emb_dim": [10]
     }
@@ -106,3 +107,4 @@ if __name__ == "__main__":
     best_config = tuning_results[0]
     print("Best hyperparameters:", best_config["params"])
     print("Best validation loss:", best_config["val_loss"])
+    print("All results:", tuning_results)
