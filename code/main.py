@@ -165,8 +165,7 @@ for epoch in range(num_epochs):
             props = props.to(device)
             preds = predictor(adj)
             val_loss += loss_fn(preds, props)
-        print(f'Epoch {epoch}, Train loss: {loss_all/len(trainset)},
-              Val loss: {val_loss/len(validset)}')
+        print(f'Epoch {epoch}, Train loss: {loss_all/len(trainset)}, Val loss: {val_loss/len(validset)}')
         
 torch.save(predictor.state_dict(), 'predictor.pth')
 
