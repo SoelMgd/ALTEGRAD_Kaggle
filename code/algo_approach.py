@@ -206,6 +206,201 @@ def generate_graph_from_features(features):
     adj_matrix = nx.to_numpy_array(G)
     return adj_matrix
 
+
+def generate_graph_from_features(features, max_iter=1000):
+    """
+    Génère une matrice d'adjacence à partir d'un vecteur de caractéristiques.
+    
+    Paramètres :
+    -----------
+    features : liste ou vecteur numpy contenant les 7 caractéristiques :
+        [num_nodes, num_edges, avg_degree, num_triangles,
+         clustering_coeff, max_kcore, num_communities]
+         
+    max_iter : nombre maximum d'itérations autorisées pour les ajustements.
+    
+    Retourne :
+    ---------
+    adj_matrix : numpy array
+        La matrice d'adjacence du graphe généré qui tente de satisfaire 
+        au mieux les contraintes.
+    """
+    # Déballage
+    num_nodes, num_edges, avg_degree, num_triangles, clustering_coeff, max_kcore, num_communities = features
+    
+    num_nodes = int(num_nodes)
+    num_edges = int(num_edges)
+    avg_degree = float(avg_degree)
+    num_triangles = int(num_triangles)
+    max_kcore = int(max_kcore)
+    num_communities = int(num_communities)
+
+    # --- Sécurité de base ---
+    # Nombre minimum d'arêtes: on ne peut pas être en dessous de 0
+    num_edges = max(num_edges, 0)
+    # Nombre maximum d'arêtes possible dans un graphe non orienté sans boucle
+    max_possible_edges = num_nodes * (num_nodes - 1) // 2
+    if num_edges > max_possible_edges:
+        num_edges = max_possible_edges
+
+    # 1) Génération initiale via SBM (Stochastic Block Model)
+    #    On crée des blocs de taille similaire, et on fixe une proba plus élevée 
+    #    à l'intérieur des blocs qu'entre blocs pour générer un effet communautaire.
+    if num_communities < 1:
+        num_communities = 1
+    community_sizes = [num_nodes // num_communities] * num_communities
+    # Ajuster pour qu'au total on ait bien num_nodes
+    community_sizes[-1] += (num_nodes - sum(community_sizes))
+    
+    # Probas internes / externes : 
+    # - plus la diagonal est élevée, plus les blocs forment des communautés denses
+    # - p_out plus faible
+    # On essaie d'adapter selon le clustering_coeff (idée : si clustering élevé, 
+    # alors on met un p_inter plus bas et un p_intra plus haut).
+    p_intra = min(0.8 + 0.2 * clustering_coeff, 1.0)  # Valeur haute si clustering élevé
+    p_inter = max(0.05, 0.2 * (1 - clustering_coeff)) # Valeur basse si clustering élevé
+    
+    block_probs = []
+    for i in range(num_communities):
+        row = []
+        for j in range(num_communities):
+            row.append(p_intra if i == j else p_inter)
+        block_probs.append(row)
+    
+    G = nx.stochastic_block_model(community_sizes, block_probs)
+    
+    # 2) Ajuster rapidement le nombre d'arêtes
+    #    - Si trop d’arêtes : on en supprime aléatoirement
+    #    - Si pas assez d’arêtes : on en ajoute aléatoirement
+    def add_random_edge(G):
+        # Ajoute une arête entre deux noeuds qui ne sont pas déjà connectés
+        # (tentatives multiples si nécessaire)
+        for _ in range(10):
+            u, v = np.random.choice(G.nodes(), 2, replace=False)
+            if not G.has_edge(u, v):
+                G.add_edge(u, v)
+                return
+        
+    def remove_random_edge(G):
+        # Supprime une arête aléatoire
+        edge = random.choice(list(G.edges()))
+        G.remove_edge(*edge)
+    
+    current_edges = G.number_of_edges()
+    while current_edges < num_edges:
+        add_random_edge(G)
+        current_edges = G.number_of_edges()
+    while current_edges > num_edges:
+        remove_random_edge(G)
+        current_edges = G.number_of_edges()
+
+    # 3) Ajuster le degré moyen, nombre de triangles et le clustering
+    #    On fait du *rewiring* pour essayer d'augmenter/diminuer 
+    #    le clustering ou le nombre de triangles sans trop casser 
+    #    le nombre d’arêtes.
+    
+    def get_graph_stats(G):
+        tri = sum(nx.triangles(G).values()) // 3
+        c_global = nx.average_clustering(G)
+        return tri, c_global
+    
+    # Petite fonction de "rewire"
+    # On enlève une arête et on en ajoute une autre pour essayer de 
+    # rapprocher le clustering / triangles de la cible.
+    def edge_rewire(G):
+        # On enlève une arête aléatoirement, puis on en ajoute une 
+        # entre des nodes qui ne sont pas connectés
+        edges = list(G.edges())
+        if not edges:
+            return
+        edge_to_remove = random.choice(edges)
+        G.remove_edge(*edge_to_remove)
+        
+        # Tenter d'ajouter
+        add_random_edge(G)
+
+    # On va faire un certain nombre d'itérations d'ajustement
+    # en tâchant d'aller vers le num_triangles / clustering_coeff
+    iteration = 0
+    while iteration < max_iter:
+        current_tri, current_clust = get_graph_stats(G)
+        
+        # Condition d'arrêt : on est "assez proche"
+        # (difficile de faire exact, donc on met des tolérances)
+        if (abs(current_tri - num_triangles) <= 2) and \
+           (abs(current_clust - clustering_coeff) < 0.02):
+            break
+        
+        # Si trop peu de triangles (vs. cible), 
+        # on tente d'augmenter localement le clustering/triangles
+        if current_tri < num_triangles:
+            # On peut essayer d'ajouter manuellement des triangles
+            # en identifiant 2 noeuds déjà connectés et un 3e 
+            # relié à l'un mais pas à l'autre, etc.
+            # Pour un code compact, on fait un rewire aléatoire 
+            # qui *peut* générer plus de triangles
+            edge_rewire(G)
+        
+        # Si trop de triangles
+        elif current_tri > num_triangles:
+            # Retirer un triangle (rewiring également, 
+            # pour casser éventuellement un cycle)
+            edge_rewire(G)
+        
+        # Ajustement du clustering
+        if current_clust < clustering_coeff:
+            # On tente un rewire en espérant augmenter le clustering
+            edge_rewire(G)
+        elif current_clust > clustering_coeff:
+            # On tente un rewire, etc.
+            edge_rewire(G)
+        
+        iteration += 1
+    
+    # 4) Ajustement du k-core : 
+    #    Si le max_kcore dans le graphe est inférieur à la cible, 
+    #    on essaie d’ajouter quelques arêtes pour augmenter 
+    #    le degré de certains nœuds.
+    #    (Ça peut être conflictuel avec le clustering ou le nb de triangles.)
+    def ensure_kcore(G, target_k):
+        c_numbers = nx.core_number(G)
+        current_max_k = max(c_numbers.values())
+        if current_max_k >= target_k:
+            return
+        else:
+            # On essaie d'augmenter le k-core en ajoutant des arêtes 
+            # autour des noeuds ayant déjà un degré élevé.
+            # Cela n'est pas garanti de marcher, on fait un best-effort
+            high_degree_nodes = sorted(G.degree(), key=lambda x: x[1], reverse=True)
+            top_nodes = [n for n, deg in high_degree_nodes[:min(5, len(high_degree_nodes))]]
+            
+            for _ in range(10):  # on tente 10 ajouts max
+                u = random.choice(top_nodes)
+                v = random.choice(top_nodes)
+                if u != v and not G.has_edge(u, v):
+                    G.add_edge(u, v)
+                # recalculer vite fait
+                c_numbers = nx.core_number(G)
+                current_max_k = max(c_numbers.values())
+                if current_max_k >= target_k:
+                    break
+    
+    ensure_kcore(G, max_kcore)
+    
+    # 5) Dernier check du nombre d’arêtes (on peut s’être écarté) 
+    #    à cause de l’étape k-core
+    current_edges = G.number_of_edges()
+    while current_edges < num_edges:
+        add_random_edge(G)
+        current_edges = G.number_of_edges()
+    while current_edges > num_edges:
+        remove_random_edge(G)
+        current_edges = G.number_of_edges()
+    
+    # 6) Retourner la matrice d'adjacence
+    adj_matrix = nx.to_numpy_array(G)
+    return adj_matrix
+
 # Exemple d'utilisation
 ### Validation prop loss
 val_prop_loss_sum = 0.0
