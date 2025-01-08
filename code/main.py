@@ -110,10 +110,10 @@ parser.add_argument('--preprocess', action='store_true', default=False, help="Pr
 parser.add_argument('--old_loss', action='store_true', default=False, help="Use the old loss (default: False)")
 
 # alpha autoencoder (weight of the property loss)
-parser.add_argument('--alpha_autoencoder', type=float, default=0.05, help="Alpha autoencoder (default: 0.05)")
+parser.add_argument('--alpha_autoencoder', type=float, default=1.0, help="Alpha autoencoder (default: 1.0)")
 
 # beta autoencoder (weight of the KL divergence)
-parser.add_argument('--beta_autoencoder', type=float, default=1.0, help="Beta autoencoder (default: 1.0)")
+parser.add_argument('--beta_autoencoder', type=float, default=0.05, help="Beta autoencoder (default: 0.05)")
 
 
 args = parser.parse_args()
