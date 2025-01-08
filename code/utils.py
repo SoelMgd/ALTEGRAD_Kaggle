@@ -295,5 +295,67 @@ def compute_graph_properties(adj):
     ]
     return torch.tensor(prop_vec, dtype=torch.float32, device=adj.device)
 
+import random
 
+def compute_graph_properties_approx(adj, edge_sampling_ratio=0.3):
+    # Conversion en graph NetworkX
+    G = nx.from_numpy_array(adj.detach().cpu().numpy())
 
+    # Filtrage des nœuds isolés (optionnel)
+    isolated = list(nx.isolates(G))
+    if len(isolated) > 0:
+        G.remove_nodes_from(isolated)
+
+    nb_nodes = G.number_of_nodes()
+    nb_edges = G.number_of_edges()
+    if nb_nodes > 1:
+        avg_degree = float(np.mean([deg for (_, deg) in G.degree()]))
+    else:
+        avg_degree = 0.0
+
+    # Approx triangle count par sampling
+    # On ne prend qu'une fraction edge_sampling_ratio des arêtes
+    edges = list(G.edges())
+    sampled_size = int(len(edges)*edge_sampling_ratio)
+    if sampled_size < 1:
+        sampled_size = 1
+    sampled_edges = random.sample(edges, sampled_size)
+    # On crée un mini-sous-graphe
+    G_samp = nx.Graph()
+    G_samp.add_nodes_from(G.nodes())
+    G_samp.add_edges_from(sampled_edges)
+
+    tri_dict = nx.triangles(G_samp)
+    nb_triangles_samp = sum(tri_dict.values()) / 3
+    # On extrapole
+    nb_triangles = nb_triangles_samp / edge_sampling_ratio
+
+    # Clustering global (c'est rapide, on peut le garder tel quel)
+    clustering_coeff = nx.transitivity(G)
+
+    # k-core max via core_number
+    if nb_nodes > 0 and nb_edges>0:
+        cnums = nx.core_number(G)  # renvoie un dict {node: coreVal}
+        max_k = max(cnums.values()) if len(cnums) > 0 else 0
+    else:
+        max_k = 0
+
+    # nb de communautés via Louvain (la partie chère)
+    # => on peut la remplacer par un algo plus simple, ou skip
+    try:
+        import community as community_louvain
+        partition = community_louvain.best_partition(G)
+        nb_communities = len(set(partition.values()))
+    except:
+        nb_communities = 1
+    
+    prop_vec = [
+        float(nb_nodes),
+        float(nb_edges),
+        float(avg_degree),
+        float(nb_triangles),
+        float(clustering_coeff),
+        float(max_k),
+        float(nb_communities),
+    ]
+    return torch.tensor(prop_vec, dtype=torch.float32, device=adj.device)

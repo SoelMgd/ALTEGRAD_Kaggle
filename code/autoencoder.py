@@ -7,7 +7,7 @@ from torch_geometric.nn import global_add_pool
 
 import numpy as np
 
-from utils import compute_graph_properties
+from utils import compute_graph_properties, compute_graph_properties_approx
 
 # Decoder
 class Decoder(nn.Module):
@@ -161,7 +161,8 @@ class VariationalAutoEncoder(nn.Module):
         prop_loss = 0.0
         for i in range(adj_recon.size(0)):
             # calcule les propriétés du graphe reconstruit i
-            prop_est = compute_graph_properties(adj_recon[i])
+            #prop_est = compute_graph_properties(adj_recon[i])
+            prop_est = compute_graph_properties_approx(adj_recon[i])  # approximatif
             # compare à data.stats[i] (dimension (7,))
             prop_loss += F.l1_loss(prop_est, data.stats[i], reduction='mean')
         prop_loss = prop_loss / adj_recon.size(0)
@@ -172,7 +173,7 @@ class VariationalAutoEncoder(nn.Module):
         return loss, recon_loss, kld, prop_loss
 
 
-    def loss_function(self, data, beta=0.05, alpha=1.0, property_calc_ratio=0.2):
+    def loss_function(self, data, min_max, beta=0.05, alpha=1.0, property_calc_ratio=0.2):
         """
         data: batch issu du DataLoader
         beta: pondère la partie KLD
@@ -216,11 +217,15 @@ class VariationalAutoEncoder(nn.Module):
 
             # On calcule la property loss uniquement pour ces indices
             for i in sample_indices:
-                prop_est = compute_graph_properties(adj_recon[i])   # (7,) par ex.
+                #prop_est = compute_graph_properties(adj_recon[i])   # (7,) par ex.
+                prop_est = compute_graph_properties_approx(adj_recon[i])  # approximatif
                 prop_target = data.stats[i]                         # (7,)
+                
+                prop_est_scaled = (prop_est - min_max[0]) / (min_max[1] - min_max[0])
+                prop_target_scaled = (prop_target - min_max[0]) / (min_max[1] - min_max[0])
 
                 # MAE entre prop_est et prop_target
-                prop_loss += F.l1_loss(prop_est, prop_target, reduction='mean')
+                prop_loss += F.l1_loss(prop_est_scaled, prop_target_scaled, reduction='mean')
             
             # Normalisation par le nombre d’échantillons où on calcule la propriété
             prop_loss = prop_loss / nb_samples_prop

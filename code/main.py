@@ -121,6 +121,13 @@ train_loader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
 val_loader = DataLoader(validset, batch_size=args.batch_size, shuffle=False)
 test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
 
+# Count min and max for each of the 7 features
+min_max = torch.zeros((7, 2))
+for data in train_loader:
+    for i in range(7):
+        min_max[i, 0] = min(min_max[i, 0], torch.min(data.stats[:, i]))
+        min_max[i, 1] = max(min_max[i, 1], torch.max(data.stats[:, i]))
+
 
 # initialize VGAE model
 autoencoder = VariationalAutoEncoder(args.spectral_emb_dim+1, args.hidden_dim_encoder, args.hidden_dim_decoder, args.latent_dim, args.n_layers_encoder, args.n_layers_decoder, args.n_max_nodes).to(device)
@@ -144,7 +151,7 @@ if args.train_autoencoder:
         for data in train_loader:
             data = data.to(device)
             optimizer.zero_grad()
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data)
+            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, min_max)
             train_loss_all_recon += recon.item()
             train_loss_all_kld += kld.item()
             train_loss_all_prop += prop_loss.item()
@@ -164,7 +171,7 @@ if args.train_autoencoder:
 
         for data in val_loader:
             data = data.to(device)
-            loss, recon, kld, prop_loss  = autoencoder.loss_function(data)
+            loss, recon, kld, prop_loss  = autoencoder.loss_function(data, min_max)
             val_loss_all_recon += recon.item()
             val_loss_all_kld += kld.item()
             val_loss_all += loss.item()
