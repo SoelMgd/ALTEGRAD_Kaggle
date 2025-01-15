@@ -134,7 +134,7 @@ test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
 
 # Count min and max for each of the 7 features
 min_max = torch.zeros((7, 2))
-for data in train_loader:
+for data in test_loader:
     for i in range(7):
         min_max[i, 0] = min(min_max[i, 0], torch.min(data.stats[:, i]))
         min_max[i, 1] = max(min_max[i, 1], torch.max(data.stats[:, i]))
