@@ -93,7 +93,7 @@ parser.add_argument('--n-condition', type=int, default=7)
 
 # Contrastive hyperparams (if you want them easily tunable)
 parser.add_argument('--beta-kld', type=float, default=0.05, help='Weight for KLD term')
-parser.add_argument('--alpha-cont', type=float, default=0.1, help='Weight for contrastive term')
+parser.add_argument('--alpha-cont', type=float, default=10, help='Weight for contrastive term')
 parser.add_argument('--temp-cont', type=float, default=0.07, help='Temperature for contrastive loss')
 
 args = parser.parse_args()
