@@ -4,7 +4,97 @@ from torch import nn
 import torch_geometric as pyg
 import networkx as nx
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 class GraphFeatures(nn.Module):
+    def __init__(self, eps=1e-6, community_threshold=0.01, smooth_max_beta=10):
+        """
+        eps : petite constante pour éviter divisions par zéro.
+        community_threshold : seuil pour compter une valeur propre
+                             comme "quasi-nulle" (pour approx. du nb de communautés).
+        smooth_max_beta : paramètre de lissage pour approximer le max avec softmax.
+        """
+        super().__init__()
+        self.eps = eps
+        self.community_threshold = community_threshold
+        self.smooth_max_beta = smooth_max_beta
+
+    def forward(self, A_batch: torch.Tensor):
+        """
+        Paramètres
+        ----------
+        A_batch : torch.Tensor de taille (B, n, n)
+            B = batch_size, n = nombre maximal de noeuds
+            Matrice(s) d'adjacence "soft" pour chaque échantillon du batch.
+
+        Retour
+        ------
+        features : torch.Tensor de taille (B, 7)
+            Contient, pour chaque échantillon du batch, les 7 propriétés suivantes :
+              1) nombre_noeuds (soft)
+              2) nombre_aretes_soft
+              3) degre_moyen_soft
+              4) nombre_triangles_soft
+              5) clustering_global_soft
+              6) max_kcore_soft (approx)
+              7) nb_communautes_soft (approx)
+        """
+        B, n, _ = A_batch.shape  # (batch_size, n, n)
+
+        # 1) Nombre de nœuds (soft count of non-empty rows)
+        row_sums = A_batch.sum(dim=2)  # => [B, n]
+        node_presence = torch.sigmoid(row_sums - self.eps)  # Smooth step
+        n_t = node_presence.sum(dim=1)  # => [B]
+
+        # 2) Nombre d'arêtes (soft)
+        E_soft = 0.5 * A_batch.sum(dim=(1, 2))  # => [B]
+
+        # 3) Degré moyen (soft)
+        deg_mean_soft = (2.0 * E_soft) / (n_t + self.eps)  # => [B]
+
+        # 4) Nombre de triangles (soft) via A^3
+        A2 = torch.bmm(A_batch, A_batch)  # => [B, n, n]
+        A3 = torch.bmm(A2, A_batch)  # => [B, n, n]
+        trace_A3 = torch.diagonal(A3, dim1=1, dim2=2).sum(dim=1)  # => [B]
+        nb_triangles_soft = trace_A3 / 6.0  # => [B]
+
+        # 5) Coefficient de clustering global (soft)
+        deg = A_batch.sum(dim=2)  # => [B, n]
+        triplets = 0.5 * (deg * (deg - 1.0)).sum(dim=1)  # => [B]
+        clustering_soft = (3.0 * nb_triangles_soft) / (triplets + self.eps)  # => [B]
+
+        # 6) Max k-core (smooth max degree)
+        max_kcore_soft = torch.logsumexp(self.smooth_max_beta * deg, dim=1) / self.smooth_max_beta  # Smooth approximation of max
+
+        # 7) Nombre de communautés (approx with smooth eigenvalue count)
+        nb_coms_list = []
+        for b in range(B):
+            D_b = torch.diag(deg[b])  # diag(deg_i) => [n, n]
+            L_b = D_b - A_batch[b]  # => [n, n]
+            vals_b = torch.linalg.eigvalsh(L_b)  # => [n]
+            # Smooth count of eigenvalues below the threshold
+            smooth_count = torch.sigmoid((self.community_threshold - vals_b.abs()) / self.eps).sum()
+            nb_coms_list.append(smooth_count)
+
+        nb_coms_soft = torch.stack(nb_coms_list, dim=0).to(A_batch.dtype)  # => [B]
+
+        # On empile nos 7 propriétés en un seul tenseur [B, 7]
+        features = torch.stack([
+            n_t,
+            E_soft,
+            deg_mean_soft,
+            nb_triangles_soft,
+            clustering_soft,
+            max_kcore_soft,
+            nb_coms_soft
+        ], dim=1)  # => [B, 7]
+
+        return features
+
+
+class GraphFeaturesOld(nn.Module):
     def __init__(self, eps=1e-6, community_threshold=0.01):
         """
         eps : petite constante pour éviter divisions par zéro.
@@ -38,9 +128,8 @@ class GraphFeatures(nn.Module):
         B, n, _ = A_batch.shape  # (batch_size, n, n)
 
         # 1) Nombre de nœuds
-        #    Ici, n est identique pour tout le batch (n max. de la reconstruction).
-        #    Si on veut un tenseur par échantillon, on peut répéter n pour chaque batch.
-        n_t = n * torch.ones(B, dtype=A_batch.dtype, device=A_batch.device)
+        #    Count the number of nodes for each graph in the batch
+        n_t = A_batch.sum(dim=(1, 2))  # => [B]
         
         # 2) Nombre d'arêtes (soft)
         #    Pour chaque échantillon => somme(A[b,:,:]) / 2
